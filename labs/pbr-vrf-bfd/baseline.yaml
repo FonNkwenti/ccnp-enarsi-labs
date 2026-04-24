@@ -1,0 +1,191 @@
+topic: pbr-vrf-bfd
+topic_name: "Policy Routing, VRF-Lite, and BFD"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-24"
+    agent: claude-sonnet-4-6
+    skill: spec-creator
+    skill_version: "2026-04-24"
+  updated: []
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "Source / CE1 — originates traffic subject to PBR; CE in VRF CUST-A for VRF-Lite lab"
+      loopback0: "10.1.1.1/32"
+      console_port: null
+
+    - name: R2
+      platform: iosv
+      role: "Policy router / PE1 — applies PBR policy map (lab-00); hosts VRF CUST-A and CUST-B (lab-01)"
+      loopback0: "10.2.2.2/32"
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "Path-A upper backbone — next-hop for preferred PBR traffic (lab-00); idle in lab-01"
+      loopback0: "10.3.3.3/32"
+      console_port: null
+
+    - name: R4
+      platform: iosv
+      role: "Path-B lower backbone / PE2 — next-hop for fallback PBR traffic (lab-00); hosts VRF CUST-A and CUST-B (lab-01)"
+      loopback0: "10.4.4.4/32"
+      console_port: null
+
+    - name: R5
+      platform: iosv
+      role: "Destination / CE2 — receives PBR-steered traffic (lab-00); CE in VRF CUST-B for VRF-Lite lab"
+      loopback0: "10.5.5.5/32"
+      console_port: null
+
+  links:
+    - id: L1
+      source: "R1:Gi0/1"
+      target: "R2:Gi0/1"
+      subnet: "10.12.0.0/30"
+      notes: "Source-to-policy-router; VRF CUST-A PE-CE on R2 (lab-01). R1=.1, R2=.2"
+
+    - id: L2
+      source: "R2:Gi0/2"
+      target: "R3:Gi0/1"
+      subnet: "10.23.0.0/30"
+      notes: "PBR Path-A (upper). BFD session on this link tracks Path-A next-hop. R2=.1, R3=.2"
+
+    - id: L3
+      source: "R2:Gi0/3"
+      target: "R4:Gi0/1"
+      subnet: "10.24.0.0/30"
+      notes: "PBR Path-B (lower, flat in lab-00); 802.1Q trunk PE-PE in lab-01 (sub-ints .100/.200). R2=.1, R4=.2"
+
+    - id: L4
+      source: "R3:Gi0/2"
+      target: "R5:Gi0/1"
+      subnet: "10.35.0.0/30"
+      notes: "Path-A continuation from R3 to destination R5. R3=.1, R5=.2"
+
+    - id: L5
+      source: "R4:Gi0/2"
+      target: "R5:Gi0/2"
+      subnet: "10.45.0.0/30"
+      notes: "Path-B continuation / VRF CUST-B PE-CE on R4 (lab-01). R4=.1, R5=.2"
+
+optional_devices: []
+
+optional_links: []
+
+addressing_plan:
+  pbr:
+    policy_router: R2
+    preferred_path: "Path-A via R3 (L2 → L4)"
+    fallback_path: "Path-B via R4 (L3 → L5)"
+    track_mechanism: "set ip next-hop verify-availability <nh> seq N track N — BFD brings track object Down sub-second; PBR shifts to fallback without waiting for OSPF dead timer"
+    bfd_sessions:
+      - "R2 <-> R3 over L2 (Path-A next-hop)"
+      - "R2 <-> R4 over L3 (Path-B next-hop)"
+    rationale: "verify-availability is mandatory so PBR does not black-hole traffic to an unreachable next-hop. Without it, the route-map set is applied regardless of reachability."
+
+  vrf_lite:
+    pe_routers: ["R2", "R4"]
+    vrfs:
+      - name: CUST-A
+        rd: "65000:10"
+        pe_ce_link: "L1 (R2.Gi0/1 in VRF CUST-A <-> R1.Gi0/1)"
+        pe_pe_subint: "L3 802.1Q 100 — R2.Gi0/3.100 (10.24.10.1/30) <-> R4.Gi0/1.100 (10.24.10.2/30)"
+        ospf_process: 10
+      - name: CUST-B
+        rd: "65000:20"
+        pe_ce_link: "L5 (R4.Gi0/2 in VRF CUST-B <-> R5.Gi0/2)"
+        pe_pe_subint: "L3 802.1Q 200 — R2.Gi0/3.200 (10.24.20.1/30) <-> R4.Gi0/1.200 (10.24.20.2/30)"
+        ospf_process: 20
+    inter_vrf_leaking:
+      mechanism: "ip route vrf CUST-B <prefix> <nh> vrf CUST-A — cross-VRF static route on iosv without MPLS"
+      direction: "CUST-A → CUST-B (one shared prefix from R1 leaked into R5's VRF)"
+    rationale: "Sub-interfaces on the L3 trunk (R2.Gi0/3) keep each VRF's OSPF adjacency separate. The cross-VRF static route is the IOS mechanism for controlled inter-VRF leaking on VRF-Lite (no RT/RD import needed without MPLS)."
+
+  bfd:
+    scope: "describe-only (blueprint 1.8) — demonstrated via PBR track objects, not standalone"
+    timer_values: "300ms/900ms (tx/rx) multiplier 3 — fast enough to beat OSPF dead timer (40s default)"
+    show_commands:
+      - "show bfd neighbors"
+      - "show track"
+      - "show ip policy"
+      - "show route-map"
+
+labs:
+  - number: 0
+    folder: "lab-00-pbr-bfd"
+    title: "PBR and BFD acceleration (paired: BFD for next-hop tracking in PBR)"
+    difficulty: "Foundation"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    clean_slate: false
+    blueprint_refs: ["1.6", "1.8"]
+    objectives:
+      - "Establish OSPF area 0 across all five routers; confirm all loopbacks reachable"
+      - "Write an ACL that matches traffic from R1 Lo0 (10.1.1.1/32) destined for R5 Lo0 (10.5.5.5/32)"
+      - "Create a route-map RM-PBR with match ip address <acl> / set ip next-hop verify-availability 10.23.0.2 10 track 10"
+      - "Apply ip policy route-map RM-PBR on R2 Gi0/1 (inbound, facing R1)"
+      - "Enable BFD on R2 Gi0/2 (to R3) and R2 Gi0/3 (to R4); create ip sla / track objects bound to BFD peer state"
+      - "Shut R3 Gi0/1 and confirm PBR shifts to Path-B (R4) within one BFD hold timer — no waiting for OSPF dead timer"
+      - "Verify with show ip policy, show route-map RM-PBR, show bfd neighbors, show track, debug ip policy"
+      - "Understand: BFD fires in <1s (300ms tx * multiplier 3), OSPF dead timer fires in 40s — that gap is the value of BFD-backed PBR"
+
+  - number: 1
+    folder: "lab-01-vrf-lite-leaking"
+    title: "VRF-Lite design with inter-VRF route leaking"
+    difficulty: "Intermediate"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R4", "R5"]
+    clean_slate: false
+    blueprint_refs: ["1.7"]
+    objectives:
+      - "Create VRF CUST-A (RD 65000:10) and VRF CUST-B (RD 65000:20) on R2 and R4"
+      - "Assign R2.Gi0/1 to VRF CUST-A (PE1-CE1 link to R1); assign R4.Gi0/2 to VRF CUST-B (PE2-CE2 link to R5)"
+      - "Configure 802.1Q sub-interfaces on L3 (R2.Gi0/3 and R4.Gi0/1): .100 for CUST-A, .200 for CUST-B"
+      - "Run OSPF process 10 inside VRF CUST-A on R2 (Gi0/1 + Gi0/3.100) and R4 (Gi0/1.100); OSPF process 20 inside VRF CUST-B similarly"
+      - "Confirm show ip route vrf CUST-A on R2 sees R1 Lo0; show ip route vrf CUST-B on R4 sees R5 Lo0"
+      - "Add a cross-VRF static: ip route vrf CUST-B 10.1.1.1/32 <nh> vrf CUST-A to allow R5 to reach one R1 prefix"
+      - "Confirm VRF isolation: R5 cannot ping R1 Lo0 without the leak; with the leak only the specified prefix is reachable"
+      - "Verify with show vrf, show ip route vrf CUST-A, show ip route vrf CUST-B, show ip ospf neighbor"
+
+  - number: 2
+    folder: "lab-02-capstone-config"
+    title: "Capstone I: Full PBR/VRF/BFD configuration challenge"
+    difficulty: "Advanced"
+    type: "capstone_i"
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    clean_slate: true
+    blueprint_refs: ["1.6", "1.7", "1.8"]
+    objectives:
+      - "From a clean slate, build the full diamond topology with OSPF area 0 on the global table"
+      - "Implement PBR on R2: match R1 source traffic, set Path-A (R3) as preferred next-hop with verify-availability"
+      - "Enable BFD on both path links; bind track objects to BFD peer state; wire track objects into the route-map"
+      - "Simultaneously configure VRF-Lite: CUST-A and CUST-B on R2 and R4, sub-interfaces on L3, per-VRF OSPF"
+      - "Add one controlled inter-VRF leak (R1 prefix into CUST-B) and verify end-to-end reachability only for that prefix"
+      - "Demonstrate path failover: shut Path-A link, confirm PBR switches to Path-B in under 3 seconds"
+      - "Verify final state: show ip policy, show bfd neighbors, show vrf, show ip route vrf CUST-A/CUST-B all clean"
+
+  - number: 3
+    folder: "lab-03-capstone-troubleshooting"
+    title: "Capstone II: Comprehensive PBR/VRF/BFD troubleshooting"
+    difficulty: "Advanced"
+    type: "capstone_ii"
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    clean_slate: true
+    blueprint_refs: ["1.6", "1.7", "1.8"]
+    objectives:
+      - "Diagnose a broken PBR/VRF-Lite deployment layer by layer: PBR match -> next-hop reachability -> BFD session -> VRF assignment -> inter-VRF leak"
+      - "Use show ip policy to confirm whether the route-map is applied to the correct interface and direction"
+      - "Use show bfd neighbors and show track to determine whether the BFD-backed track object is Up or Down — and why"
+      - "Use show vrf and show ip route vrf to identify missing VRF assignments or broken per-VRF OSPF adjacencies"
+      - "Correct each fault with the minimum change required and re-verify that R1 traffic takes Path-A and VRF isolation is intact"
+      - "Document root cause, evidence, and remediation for every injected fault"

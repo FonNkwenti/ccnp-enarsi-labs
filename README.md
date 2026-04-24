@@ -62,10 +62,10 @@ Route Control and Redistribution (administrative distance, route maps, loop prev
 
 Policy Routing, VRF-Lite, and BFD (policy-based routing, VRF-Lite inter-VRF leaking, BFD convergence). **4 labs.** *Requires: ospf, bgp*
 
-- [ ] lab-00-pbr-bfd — PBR and BFD acceleration (paired: BFD for next-hop tracking in PBR)
-- [ ] lab-01-vrf-lite-leaking — VRF-Lite design with inter-VRF route leaking
-- [ ] lab-02-capstone-config — Capstone I: Full PBR/VRF/BFD configuration challenge
-- [ ] lab-03-capstone-troubleshooting — Capstone II: Comprehensive PBR/VRF/BFD troubleshooting
+- [ ] `lab-00-pbr-bfd` — PBR and BFD acceleration (paired: BFD for next-hop tracking in PBR)
+- [ ] `lab-01-vrf-lite-leaking` — VRF-Lite design with inter-VRF route leaking
+- [ ] `lab-02-capstone-config` — Capstone I: Full PBR/VRF/BFD configuration challenge
+- [ ] `lab-03-capstone-troubleshooting` — Capstone II: Comprehensive PBR/VRF/BFD troubleshooting
 
 ### mpls-l3vpn
 
