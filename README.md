@@ -1,6 +1,6 @@
-# CCNP ENARSI (350-410) Lab Series
+# CCNP ENARSI (300-410) Lab Series
 
-A comprehensive set of hands-on labs for the CCNP ENARSI (350-410) exam.
+A comprehensive set of hands-on labs for the CCNP ENARSI (300-410) exam. **47 labs** across **9 topics**.
 
 ## Getting Started
 
@@ -9,10 +9,102 @@ A comprehensive set of hands-on labs for the CCNP ENARSI (350-410) exam.
 3. Set up EVE-NG (see .agent/skills/eve-ng/SKILL.md for constraints)
 4. Navigate to a lab and follow the workbook
 
-## Lab Chapters
+## Lab Topics
 
 <!-- lab-index-start -->
-> Run `/plan-exam` first to populate this section with the topic list and lab checklist.
+
+### eigrp
+
+EIGRP Routing (classic and named mode, dual-stack, VRF and global, DUAL, stubs, load balancing, metrics). **6 labs.**
+
+- [ ] lab-00-classic-adjacency — Foundation (classic mode, neighbor relationships, authentication)
+- [ ] lab-01-named-mode-dual-stack — Named mode with IPv4/IPv6 dual-stack
+- [ ] lab-02-dual-and-stubs — DUAL algorithm, feasible successors, stub routers
+- [ ] lab-03-load-balancing-vrf — Equal/unequal-cost load balancing, VRF instances
+- [ ] lab-04-capstone-config — Capstone I: Full EIGRP configuration challenge
+- [ ] lab-05-capstone-troubleshooting — Capstone II: Comprehensive EIGRP troubleshooting
+
+### ospf
+
+OSPF Routing v2 and v3 (dual-stack, neighbors, network types, area types, router roles, virtual links, path preference). **7 labs.**
+
+- [ ] lab-00-single-area-foundation — Foundation (single area, neighbor relationships, authentication)
+- [ ] lab-01-multi-area-path-preference — Multi-area design, ABR/ASBR roles, path selection
+- [ ] lab-02-network-types — Broadcast, P2P, NBMA, point-to-multipoint networks
+- [ ] lab-03-area-types-virtual-link — Stub/totally-stub/NSSA areas, virtual links
+- [ ] lab-04-ospfv3-dual-stack — OSPFv3 with IPv4/IPv6 dual-stack
+- [ ] lab-05-capstone-config — Capstone I: Full OSPF configuration challenge
+- [ ] lab-06-capstone-troubleshooting — Capstone II: Comprehensive OSPF troubleshooting
+
+### bgp
+
+BGP Routing iBGP and eBGP (unicast and VRF-Lite, dual-stack, neighbor relationships, best-path attributes, route reflectors, policies). **6 labs.**
+
+- [ ] lab-00-ebgp-ibgp-foundation — Foundation (eBGP and iBGP neighbors, 4-byte AS, authentication)
+- [ ] lab-01-neighbor-features-dual-stack — Advanced neighbor features, dual-stack, route refresh
+- [ ] lab-02-path-preference — Best-path attributes, local preference, AS-path manipulation
+- [ ] lab-03-rr-policies-vrf — Route reflectors, inbound/outbound policies, VRF-Lite BGP
+- [ ] lab-04-capstone-config — Capstone I: Full BGP configuration challenge
+- [ ] lab-05-capstone-troubleshooting — Capstone II: Comprehensive BGP troubleshooting
+
+### route-control
+
+Route Control and Redistribution (administrative distance, route maps, loop prevention, redistribution, summarization). **6 labs.** *Requires: eigrp, ospf, bgp*
+
+- [ ] lab-00-admin-distance — Foundation (AD troubleshooting across protocols)
+- [ ] lab-01-route-maps — Route maps, attributes, tagging, filtering
+- [ ] lab-02-loop-prevention — Filtering, tagging, split horizon, route poisoning, downward bit
+- [ ] lab-03-redistribution-summarization — Redistribution and auto/manual summarization (paired)
+- [ ] lab-04-capstone-config — Capstone I: Full route control configuration challenge
+- [ ] lab-05-capstone-troubleshooting — Capstone II: Comprehensive route control troubleshooting
+
+### pbr-vrf-bfd
+
+Policy Routing, VRF-Lite, and BFD (policy-based routing, VRF-Lite inter-VRF leaking, BFD convergence). **4 labs.** *Requires: ospf, bgp*
+
+- [ ] lab-00-pbr-bfd — PBR and BFD acceleration (paired: BFD for next-hop tracking in PBR)
+- [ ] lab-01-vrf-lite-leaking — VRF-Lite design with inter-VRF route leaking
+- [ ] lab-02-capstone-config — Capstone I: Full PBR/VRF/BFD configuration challenge
+- [ ] lab-03-capstone-troubleshooting — Capstone II: Comprehensive PBR/VRF/BFD troubleshooting
+
+### mpls-l3vpn
+
+MPLS and Layer 3 VPN (MPLS forwarding, LDP, LSP, MP-BGP, VRF, route distinguisher, route target, VPNv4). **3 labs.** *Requires: bgp*
+
+- [ ] lab-00-mpls-forwarding — MPLS basics (LSR, LDP, LSP, forwarding plane)
+- [ ] lab-01-l3vpn-vrf-rd-rt — MP-BGP L3VPN design (VRF, RD, RT, VPNv4 address family)
+- [ ] lab-02-capstone — Capstone: Full MPLS L3VPN configuration and troubleshooting
+
+### dmvpn
+
+DMVPN (Dynamic Multipoint VPN) — single-hub topology (GRE, mGRE, NHRP, IPsec, spoke-to-spoke shortcut). **4 labs.** *Requires: ospf*
+
+- [ ] lab-00-phase1-hub-spoke — DMVPN Phase 1 (GRE/mGRE, NHRP hub-and-spoke mode)
+- [ ] lab-01-phase3-shortcuts — DMVPN Phase 3 (spoke-to-spoke shortcuts), IPsec protection
+- [ ] lab-02-capstone-config — Capstone I: Full DMVPN configuration challenge
+- [ ] lab-03-capstone-troubleshooting — Capstone II: Comprehensive DMVPN troubleshooting
+
+### infrastructure-security
+
+Infrastructure Security (AAA/TACACS+/RADIUS, ACLs, CoPP, IPv6 First Hop Security). **5 labs.**
+
+- [ ] lab-00-aaa — IOS AAA (TACACS+, RADIUS, local authentication)
+- [ ] lab-01-acls-urpf — ACLs (IPv4/IPv6, time-based), uRPF (unicast RPF)
+- [ ] lab-02-copp-ipv6-fhs — CoPP, IPv6 First Hop Security (RA guard, DHCP guard, binding table, ND inspection/snooping)
+- [ ] lab-03-capstone-config — Capstone I: Full infrastructure security configuration challenge
+- [ ] lab-04-capstone-troubleshooting — Capstone II: Comprehensive infrastructure security troubleshooting
+
+### infrastructure-services
+
+Infrastructure Services (device management planes, SNMP, syslog, DHCP, IP SLA, NetFlow, CCI Assurance). **6 labs.**
+
+- [ ] lab-00-device-management — Management planes (console/VTY, Telnet/HTTP(S)/SSH/SCP/(T)FTP)
+- [ ] lab-01-snmp-syslog — SNMP v2c/v3 and syslog/logging/timestamps/telemetry (observability pair)
+- [ ] lab-02-dhcp — DHCP client/server/relay for IPv4/IPv6 with options
+- [ ] lab-03-ip-sla-netflow — IP SLA, object tracking, NetFlow v9/Flexible NetFlow/IPFIX (monitoring pair)
+- [ ] lab-04-capstone-config — Capstone I: Full infrastructure services configuration challenge
+- [ ] lab-05-capstone-troubleshooting — Capstone II: Comprehensive infrastructure services troubleshooting
+
 <!-- lab-index-end -->
 
 ## Development
