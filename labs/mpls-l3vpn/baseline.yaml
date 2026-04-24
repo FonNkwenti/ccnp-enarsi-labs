@@ -1,0 +1,133 @@
+topic: mpls-l3vpn
+topic_name: "MPLS and Layer 3 VPN"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-24"
+    agent: claude-haiku-4-5-20251001
+    skill: spec-creator
+    skill_version: "2026-04-24"
+  updated: []
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "Provider Edge (PE) — VRF-A host"
+      loopback0: "10.0.1.1/32"
+      console_port: null
+
+    - name: R2
+      platform: iosv
+      role: "Provider core (P) — MPLS backbone router"
+      loopback0: "10.0.2.1/32"
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "Provider Edge (PE) — VRF-B host"
+      loopback0: "10.0.3.1/32"
+      console_port: null
+
+  links:
+    - id: L1
+      source: "R1:Gi0/1"
+      target: "R2:Gi0/1"
+      subnet: "172.16.12.0/24"
+
+    - id: L2
+      source: "R2:Gi0/2"
+      target: "R3:Gi0/1"
+      subnet: "172.16.23.0/24"
+
+optional_devices:
+  - name: R4
+    platform: iosv
+    role: "Customer Edge (CE) — VRF-A customer"
+    loopback0: "192.168.1.1/32"
+    console_port: null
+    available_from: "lab-01-capstone-config"
+    purpose: "Demonstrates PE-CE relationship for VRF-A; attached to R1"
+
+  - name: R5
+    platform: iosv
+    role: "Customer Edge (CE) — VRF-B customer"
+    loopback0: "192.168.2.1/32"
+    console_port: null
+    available_from: "lab-01-capstone-config"
+    purpose: "Demonstrates PE-CE relationship for VRF-B; attached to R3"
+
+optional_links:
+  - id: L3
+    source: "R1:Gi0/2"
+    target: "R4:Gi0/0"
+    subnet: "10.1.14.0/24"
+    available_from: "lab-01-capstone-config"
+
+  - id: L4
+    source: "R3:Gi0/2"
+    target: "R5:Gi0/0"
+    subnet: "10.1.35.0/24"
+    available_from: "lab-01-capstone-config"
+
+labs:
+  - number: 0
+    folder: "lab-00-mpls-forwarding"
+    title: "MPLS Forwarding + L3VPN Fundamentals"
+    difficulty: "Foundation"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3"]
+    clean_slate: false
+    blueprint_refs: ["2.1", "2.2"]
+    objectives:
+      - "Configure MPLS and LDP on SP backbone (R1-R2-R3) to establish LSPs"
+      - "Understand LSR roles (R1, R3 as PE; R2 as P) and label forwarding"
+      - "Configure VRFs on PEs (R1, R3) and route-targets for L3VPN"
+      - "Demonstrate MP-BGP VPNv4 route advertisement between PEs (without CEs)"
+      - "Verify MPLS forwarding plane (label distribution, LSP status, label bindings)"
+      - "Validate L3VPN control plane (VPNv4 routes, RT filtering)"
+
+  - number: 1
+    folder: "lab-01-capstone-config"
+    title: "MPLS L3VPN Full Mastery — Capstone I"
+    difficulty: "Advanced"
+    type: "capstone_i"
+    clean_slate: true
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    extends: null
+    blueprint_refs: ["2.1", "2.2"]
+    objectives:
+      - "Build complete MPLS backbone (LSR roles, LDP, LSP establishment)"
+      - "Configure PE-CE routing for dual VRFs (R1↔R4 for VRF-A, R3↔R5 for VRF-B)"
+      - "Implement MP-BGP L3VPN (VRF, RD, RT, VPNv4 address family)"
+      - "Verify end-to-end customer connectivity across MPLS network (R4↔R5 via VPN)"
+      - "Demonstrate label operations at each layer (BGP, LDP, forwarding)"
+      - "Test redundancy or advanced MPLS features (e.g., segment routing introduction if time permits)"
+
+  - number: 2
+    folder: "lab-02-capstone-troubleshooting"
+    title: "MPLS L3VPN Comprehensive Troubleshooting — Capstone II"
+    difficulty: "Advanced"
+    type: "capstone_ii"
+    clean_slate: true
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    extends: null
+    blueprint_refs: ["2.1", "2.2"]
+    objectives:
+      - "Diagnose and resolve MPLS forwarding failures (LSP black holes, label mismatches)"
+      - "Troubleshoot LDP neighbor relationships and label distribution issues"
+      - "Fix VRF route leakage and RT filtering problems"
+      - "Resolve MP-BGP VPNv4 advertisement and path selection issues"
+      - "Debug PE-CE routing failures and VPN connectivity problems"
+      - "Validate label stacks and forwarding consistency across the network"
+    faults:
+      - "LDP disabled on one link (LSP incomplete)"
+      - "Incorrect route-target on one PE (VPN partition)"
+      - "MP-BGP not enabled for VPNv4 address family on one PE"
+      - "Interface IP address misconfiguration breaking CE-PE adjacency"
+      - "Loopback IP conflict causing routing inconsistency (requires detective work)"

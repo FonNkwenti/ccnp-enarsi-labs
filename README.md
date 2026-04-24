@@ -71,9 +71,9 @@ Policy Routing, VRF-Lite, and BFD (policy-based routing, VRF-Lite inter-VRF leak
 
 MPLS and Layer 3 VPN (MPLS forwarding, LDP, LSP, MP-BGP, VRF, route distinguisher, route target, VPNv4). **3 labs.** *Requires: bgp*
 
-- [ ] lab-00-mpls-forwarding — MPLS basics (LSR, LDP, LSP, forwarding plane)
-- [ ] lab-01-l3vpn-vrf-rd-rt — MP-BGP L3VPN design (VRF, RD, RT, VPNv4 address family)
-- [ ] lab-02-capstone — Capstone: Full MPLS L3VPN configuration and troubleshooting
+- [ ] lab-00-mpls-forwarding — MPLS Forwarding + L3VPN Fundamentals
+- [ ] lab-01-capstone-config — MPLS L3VPN Full Mastery — Capstone I
+- [ ] lab-02-capstone-troubleshooting — MPLS L3VPN Comprehensive Troubleshooting — Capstone II
 
 ### dmvpn
 
