@@ -1,4 +1,4 @@
-# CCNP ENARSI (350-410) Lab Project
+# CCNP ENARSI (300-410) Lab Project
 
 ## Shared Context (Skills + Standards)
 
@@ -6,8 +6,8 @@ See .agent/skills/memory/CLAUDE.md for the foundation skills repository context.
 
 ## This Certification
 
-- **Exam**: CCNP ENARSI (350-410)
-- **Audience**: Network engineers preparing for the 350-410 exam
+- **Exam**: CCNP ENARSI (300-410)
+- **Audience**: Network engineers preparing for the 300-410 exam
 - **Platform**: EVE-NG on Dell Latitude 5540 (Intel/Windows)
 
 ## Project Structure
@@ -20,11 +20,13 @@ See conductor/product.md and conductor/workflow.md for detailed documentation.
 - See labs/ for existing lab content
 - Run git submodule status to check skills version
 
-## Three-Phase Workflow
+## Three-Phase Workflow (slash commands)
 
-1. Phase 1 - Plan: Upload blueprint to blueprint/350-410/blueprint.md, then run exam-planner
-2. Phase 2 - Spec: Run spec-creator per topic (review after each)
-3. Phase 3 - Build: Run lab-workbook-creator one lab at a time (review after each)
+1. Phase 1 - Plan: Upload blueprint to blueprint/300-410/blueprint.md, then run /plan-exam
+2. Phase 2 - Spec: Run /create-spec <topic> per topic (review after each)
+3. Phase 3 - Build: Run /build-lab <topic>/<lab-id> one lab at a time (review after each)
+
+Additional commands: /build-capstone, /tag-lab, /sync-skills, /status. All commands live in .claude/commands/ - they warn on missing prerequisites but let you proceed (advisory gating).
 
 ## Common Commands
 
