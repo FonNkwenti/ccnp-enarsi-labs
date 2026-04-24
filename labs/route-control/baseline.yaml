@@ -1,0 +1,214 @@
+topic: route-control
+topic_name: "Route Control and Redistribution"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-24"
+    agent: claude-opus-4-7
+    skill: spec-creator
+    skill_version: "2026-04-24"
+  updated: []
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "OSPF-only internal — originates OSPF prefixes redistributed by the ASBRs"
+      loopback0: "10.1.1.1/32"
+      console_port: null
+
+    - name: R2
+      platform: iosv
+      role: "ASBR #1 — OSPF <-> EIGRP mutual redistribution; also eBGP peer to R5 (AS 65000)"
+      loopback0: "10.2.2.2/32"
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "ASBR #2 — OSPF <-> EIGRP mutual redistribution (second redistribution point for loop/suboptimal demos)"
+      loopback0: "10.3.3.3/32"
+      console_port: null
+
+    - name: R4
+      platform: iosv
+      role: "EIGRP-only internal — originates EIGRP prefixes redistributed by the ASBRs"
+      loopback0: "10.4.4.4/32"
+      console_port: null
+
+    - name: R5
+      platform: iosv
+      role: "External eBGP peer (AS 65001) — source of BGP-learned prefixes for BGP<->IGP redistribution"
+      loopback0: "192.168.5.5/32"
+      console_port: null
+
+  links:
+    - id: L1
+      source: "R1:Gi0/1"
+      target: "R2:Gi0/1"
+      subnet: "10.12.0.0/30"
+      notes: "OSPF area 0 (R1=.1, R2=.2)"
+
+    - id: L2
+      source: "R1:Gi0/2"
+      target: "R3:Gi0/1"
+      subnet: "10.13.0.0/30"
+      notes: "OSPF area 0 (R1=.1, R3=.2)"
+
+    - id: L3
+      source: "R2:Gi0/2"
+      target: "R4:Gi0/1"
+      subnet: "10.24.0.0/30"
+      notes: "EIGRP AS 100 named-mode (R2=.1, R4=.2)"
+
+    - id: L4
+      source: "R3:Gi0/2"
+      target: "R4:Gi0/2"
+      subnet: "10.34.0.0/30"
+      notes: "EIGRP AS 100 named-mode (R3=.1, R4=.2)"
+
+    - id: L5
+      source: "R2:Gi0/3"
+      target: "R5:Gi0/1"
+      subnet: "172.16.25.0/30"
+      notes: "eBGP AS 65000 <-> AS 65001 (R2=.1, R5=.2)"
+
+optional_devices: []
+
+optional_links: []
+
+addressing_plan:
+  ospf:
+    process_id: 1
+    area: 0
+    members: ["R1", "R2", "R3"]
+    interfaces: ["R1 Gi0/1", "R1 Gi0/2", "R2 Gi0/1", "R3 Gi0/1", "loopbacks R1/R2/R3"]
+  eigrp:
+    mode: "named"
+    instance_name: "ENARSI"
+    asn: 100
+    members: ["R2", "R3", "R4"]
+    interfaces: ["R2 Gi0/2", "R3 Gi0/2", "R4 Gi0/1", "R4 Gi0/2", "loopbacks R2/R3/R4"]
+    rationale: "Named-mode aligns with the eigrp topic (lab-01-named-mode-dual-stack) and is the modern IOS default. Auto-summary is demonstrated by showing it is OFF in named mode by default — classic mode is not reintroduced just to toggle a deprecated feature."
+  bgp:
+    local_asn: 65000
+    remote_asn: 65001
+    peering: "R2 <-> R5 over L5 (172.16.25.0/30), update-source default"
+    rationale: "External eBGP peer on R5 keeps BGP redistribution mechanics visible without adding iBGP complexity."
+  loop_prevention_coverage:
+    in_scope:
+      - "Distribute-list / prefix-list filtering on redistribution boundaries"
+      - "Route tagging + deny-on-tag match in route-maps"
+      - "Split horizon (illustrated on EIGRP)"
+      - "Route poisoning (infinite metric on redistributed routes to force preference)"
+    out_of_scope:
+      - "OSPF DN-bit / downward bit — applies only to OSPF-as-PE-CE in L3VPN (belongs in mpls-l3vpn spec, not here)"
+
+labs:
+  - number: 0
+    folder: "lab-00-admin-distance"
+    title: "Administrative Distance Fundamentals and Troubleshooting"
+    difficulty: "Foundation"
+    type: "progressive"
+    time_minutes: 75
+    devices: ["R1", "R2", "R3", "R4"]
+    clean_slate: false
+    blueprint_refs: ["1.1"]
+    objectives:
+      - "Bring up OSPF area 0 on R1-R2-R3 and EIGRP AS 100 (named mode) on R2-R3-R4"
+      - "Observe default ADs: OSPF 110, EIGRP internal 90, EIGRP external 170, BGP external 20, iBGP 200, static 1, connected 0"
+      - "Introduce a prefix learned by both OSPF and EIGRP (via a shared loopback injection on R2/R3) and predict which route wins by AD"
+      - "Use distance ospf external / distance eigrp to override AD and watch the RIB change"
+      - "Read show ip route, show ip protocols, show ip route <prefix> and tie AD to route selection"
+
+  - number: 1
+    folder: "lab-01-route-maps"
+    title: "Route Maps — Match, Set, Attribute Manipulation, and Tagging"
+    difficulty: "Intermediate"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    clean_slate: false
+    extends: "lab-00-admin-distance"
+    blueprint_refs: ["1.2"]
+    objectives:
+      - "Bring R5 online and configure eBGP between R2 (AS 65000) and R5 (AS 65001); advertise 192.168.5.0/24 from R5"
+      - "Write a prefix-list that matches specific loopbacks (10.1.1.1/32, 10.4.4.4/32)"
+      - "Write a route-map RM-TAG-OSPF with match ip address prefix-list ... / set tag 100 and apply on redistribution"
+      - "Write a route-map RM-SET-METRIC that uses set metric and set metric-type to shape redistributed route cost"
+      - "Apply route-maps inbound/outbound on the BGP neighbor to manipulate local-preference / MED / community on R5-learned prefixes"
+      - "Verify with show route-map, show ip bgp <prefix>, show ip route <prefix>, debug ip routing"
+
+  - number: 2
+    folder: "lab-02-loop-prevention"
+    title: "Loop Prevention: Filtering, Tagging, Split Horizon, and Route Poisoning"
+    difficulty: "Intermediate"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3", "R4"]
+    clean_slate: false
+    extends: "lab-01-route-maps"
+    blueprint_refs: ["1.3"]
+    objectives:
+      - "Enable mutual redistribution on BOTH R2 and R3 (OSPF <-> EIGRP) and observe the resulting routing loop / suboptimal path"
+      - "Apply route tagging on redistribution (RM-TAG-OSPF, RM-TAG-EIGRP) so each ASBR can identify routes that originated on the other side"
+      - "Add a deny-on-match-tag clause to block the tagged route from being redistributed back into its source protocol — the canonical tag-based loop-prevention design"
+      - "Demonstrate route poisoning by setting an infinite/very-high metric on a specific redistributed prefix and watching it fall out of the RIB"
+      - "Observe EIGRP split horizon on a hub-spoke style interface and the command to disable it where required"
+      - "Note: OSPF 'downward bit' (DN-bit) is an L3VPN-specific mechanism and is covered in the mpls-l3vpn topic, not here"
+      - "Verify with show ip route, show ip eigrp topology, show ip ospf database external, show route-map"
+
+  - number: 3
+    folder: "lab-03-redistribution-summarization"
+    title: "Redistribution and Summarization (paired)"
+    difficulty: "Advanced"
+    type: "progressive"
+    time_minutes: 105
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    clean_slate: false
+    extends: "lab-02-loop-prevention"
+    blueprint_refs: ["1.4", "1.5"]
+    objectives:
+      - "Perform redistribution across all source types: connected, static, protocol->protocol (OSPF<->EIGRP, BGP<->OSPF, BGP<->EIGRP)"
+      - "Set explicit seed metrics with default-metric and with per-protocol metric under redistribute"
+      - "Understand E1 vs E2 (OSPF) and internal vs external (EIGRP) route types and when each is created"
+      - "Configure manual summarization: area X range in OSPF (on ABR), summary-address in OSPF (on ASBR for externals), ip summary-address eigrp in EIGRP, aggregate-address in BGP"
+      - "Demonstrate that EIGRP named-mode has auto-summary OFF by default (and the CLI location of the knob); note that auto-summary is a classic-mode legacy feature"
+      - "Observe Null0 summary routes generated automatically by manual summarization and explain why they exist (loop prevention for the summarized block)"
+      - "Verify with show ip route, show ip ospf database, show ip eigrp topology, show ip bgp, show ip route <summary-prefix>"
+
+  - number: 4
+    folder: "lab-04-capstone-config"
+    title: "Route Control and Redistribution — Capstone I"
+    difficulty: "Advanced"
+    type: "capstone_i"
+    clean_slate: true
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    extends: null
+    blueprint_refs: ["1.1", "1.2", "1.3", "1.4", "1.5"]
+    objectives:
+      - "From a clean slate, build the full dual-domain topology with a dual-ASBR redistribution design"
+      - "Bring up OSPF area 0 on the OSPF side and EIGRP AS 100 (named-mode) on the EIGRP side; bring up eBGP R2<->R5"
+      - "Design and apply route-maps on every redistribution point: tag on egress, deny-on-tag on ingress"
+      - "Redistribute connected, static, BGP-learned, and cross-protocol prefixes with appropriate seed metrics and metric-types"
+      - "Summarize the OSPF externals at R2/R3 (summary-address) and summarize EIGRP internals at R2/R3 (ip summary-address eigrp)"
+      - "Verify end-to-end: every router's RIB contains the expected set of prefixes with the expected route source and AD; no routing loops; no duplicate redistribution"
+
+  - number: 5
+    folder: "lab-05-capstone-troubleshooting"
+    title: "Route Control and Redistribution — Capstone II (troubleshooting)"
+    difficulty: "Advanced"
+    type: "capstone_ii"
+    clean_slate: true
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4", "R5"]
+    extends: null
+    blueprint_refs: ["1.1", "1.2", "1.3", "1.4", "1.5"]
+    objectives:
+      - "Diagnose a broken route-control deployment layer by layer: AD -> route-map logic -> redistribution direction -> loop/filter correctness -> summarization boundaries"
+      - "Use targeted show commands (show ip route, show ip protocols, show route-map, show ip ospf database external, show ip eigrp topology, show ip bgp) to localise each fault"
+      - "Distinguish symptoms caused by AD override from those caused by a route-map permit/deny inversion or a missing set metric"
+      - "Correct each fault with the minimum change required and re-verify end-to-end reachability across both IGP domains and the eBGP edge"
+      - "Document root cause, evidence, and remediation for every injected fault"

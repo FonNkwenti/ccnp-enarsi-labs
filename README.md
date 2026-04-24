@@ -51,12 +51,12 @@ BGP Routing iBGP and eBGP (unicast and VRF-Lite, dual-stack, neighbor relationsh
 
 Route Control and Redistribution (administrative distance, route maps, loop prevention, redistribution, summarization). **6 labs.** *Requires: eigrp, ospf, bgp*
 
-- [ ] lab-00-admin-distance — Foundation (AD troubleshooting across protocols)
-- [ ] lab-01-route-maps — Route maps, attributes, tagging, filtering
-- [ ] lab-02-loop-prevention — Filtering, tagging, split horizon, route poisoning, downward bit
-- [ ] lab-03-redistribution-summarization — Redistribution and auto/manual summarization (paired)
-- [ ] lab-04-capstone-config — Capstone I: Full route control configuration challenge
-- [ ] lab-05-capstone-troubleshooting — Capstone II: Comprehensive route control troubleshooting
+- [ ] `lab-00-admin-distance` — Administrative Distance Fundamentals and Troubleshooting
+- [ ] `lab-01-route-maps` — Route Maps — Match, Set, Attribute Manipulation, and Tagging
+- [ ] `lab-02-loop-prevention` — Loop Prevention: Filtering, Tagging, Split Horizon, and Route Poisoning
+- [ ] `lab-03-redistribution-summarization` — Redistribution and Summarization (paired)
+- [ ] `lab-04-capstone-config` — Route Control and Redistribution — Capstone I
+- [ ] `lab-05-capstone-troubleshooting` — Route Control and Redistribution — Capstone II (troubleshooting)
 
 ### pbr-vrf-bfd
 
