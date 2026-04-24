@@ -11,7 +11,7 @@ meta:
     skill_version: "2026-04-24"
   updated:
     - date: "2026-04-24"
-      agent: claude-haiku-4-5-20251001
+      agent: claude-opus-4-7
       skill: spec-creator
       note: "Refactor: single customer VRF (CUST-A) for end-to-end L3VPN reachability; interface-level IP plan; fault catalog moved to spec.md."
 

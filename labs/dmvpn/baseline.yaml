@@ -1,0 +1,152 @@
+topic: dmvpn
+topic_name: "DMVPN (single hub)"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-24"
+    agent: claude-opus-4-7
+    skill: spec-creator
+    skill_version: "2026-04-24"
+  updated: []
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "DMVPN hub (NHS) — HQ site, NHRP next-hop server"
+      loopback0: "10.1.1.1/24"
+      console_port: null
+
+    - name: R2
+      platform: iosv
+      role: "DMVPN spoke 1 — Branch A"
+      loopback0: "10.2.2.2/24"
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "DMVPN spoke 2 — Branch B"
+      loopback0: "10.3.3.3/24"
+      console_port: null
+
+    - name: R4
+      platform: iosv
+      role: "Transit (simulated ISP) — underlay only, not a DMVPN member"
+      loopback0: "4.4.4.4/32"
+      console_port: null
+
+  links:
+    - id: L1
+      source: "R1:Gi0/0"
+      target: "R4:Gi0/0"
+      subnet: "203.0.113.0/30"
+      notes: "Underlay: hub public-side attachment to ISP (R1=.1, R4=.2)"
+
+    - id: L2
+      source: "R2:Gi0/0"
+      target: "R4:Gi0/1"
+      subnet: "198.51.100.0/30"
+      notes: "Underlay: spoke1 public-side attachment to ISP (R2=.1, R4=.2)"
+
+    - id: L3
+      source: "R3:Gi0/0"
+      target: "R4:Gi0/2"
+      subnet: "192.0.2.0/30"
+      notes: "Underlay: spoke2 public-side attachment to ISP (R3=.1, R4=.2)"
+
+optional_devices: []
+
+optional_links: []
+
+overlay:
+  tunnel_subnet: "10.100.0.0/24"
+  hub_tunnel_ip: "10.100.0.1/24"
+  spoke1_tunnel_ip: "10.100.0.2/24"
+  spoke2_tunnel_ip: "10.100.0.3/24"
+  nhrp_network_id: 100
+  nhrp_authentication: "ENARSI"
+  tunnel_key: 100
+  overlay_igp: "OSPF process 100, area 0, network type point-to-multipoint"
+  underlay_routing: "Static default route from each DMVPN member (R1/R2/R3) toward R4; R4 has connected routes only"
+  ipsec:
+    applicable_from: "lab-01-phase3-shortcuts"
+    ike_version: "IKEv1 (pre-shared key)"
+    psk: "cisco123"
+    isakmp_policy: "AES-256, SHA-256, DH group 14, lifetime 86400"
+    transform_set: "esp-aes 256 esp-sha256-hmac, transport mode"
+    profile_name: "DMVPN-PROFILE"
+    applied_via: "tunnel protection ipsec profile DMVPN-PROFILE"
+
+labs:
+  - number: 0
+    folder: "lab-00-phase1-hub-spoke"
+    title: "DMVPN Phase 1 — Hub-and-Spoke with mGRE and NHRP"
+    difficulty: "Foundation"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3", "R4"]
+    clean_slate: false
+    blueprint_refs: ["2.3", "2.3.a", "2.3.b", "2.3.d"]
+    objectives:
+      - "Build the underlay: configure public interface IPs on R1/R2/R3 and a default route from each member toward R4 (no underlay IGP)"
+      - "Configure mGRE tunnels on all three DMVPN members (tunnel mode gre multipoint) — not only the hub"
+      - "Configure NHRP on hub (network-id, authentication, map multicast dynamic, hold time) and on spokes (nhs, nbma, map, map multicast to hub NBMA)"
+      - "Bring up OSPF area 0 over the tunnel with network type point-to-multipoint and Loopback0 advertised"
+      - "Verify dynamic spoke registration (NHRP dynamic entries on hub) — this is what blueprint 2.3.d 'Dynamic neighbor' refers to"
+      - "Observe Phase 1 behavior: spoke-to-spoke traffic transits the hub (confirm with traceroute from R2 Lo0 to R3 Lo0 showing R1 in the path)"
+      - "Read show dmvpn, show ip nhrp, show ip ospf neighbor, show ip route, and tie each to the control plane"
+
+  - number: 1
+    folder: "lab-01-phase3-shortcuts"
+    title: "DMVPN Phase 3 — Spoke-to-Spoke Shortcuts with IPsec Protection"
+    difficulty: "Intermediate"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3", "R4"]
+    extends: "lab-00-phase1-hub-spoke"
+    clean_slate: false
+    blueprint_refs: ["2.3", "2.3.a", "2.3.b", "2.3.c", "2.3.e"]
+    objectives:
+      - "Enable Phase 3 by ADDING ip nhrp redirect on the hub tunnel interface (no tunnel-mode change required — mGRE is already in place from lab-00)"
+      - "Enable Phase 3 by ADDING ip nhrp shortcut on spoke tunnel interfaces so spokes install NHRP-resolved shortcuts in the FIB"
+      - "Configure ISAKMP policy and PSK (keyring), IPsec transform-set (transport mode), and an IPsec profile"
+      - "Apply tunnel protection ipsec profile DMVPN-PROFILE on all three tunnel interfaces"
+      - "Trigger spoke-to-spoke resolution (ping R3 Lo0 from R2 Lo0) and confirm NHRP shortcut creation plus a direct spoke-to-spoke tunnel (traceroute no longer shows R1)"
+      - "Verify IPsec: show crypto ipsec sa shows encrypted SAs between spokes after shortcut forms"
+
+  - number: 2
+    folder: "lab-02-capstone-config"
+    title: "DMVPN Full Configuration Mastery — Capstone I"
+    difficulty: "Advanced"
+    type: "capstone_i"
+    clean_slate: true
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4"]
+    extends: null
+    blueprint_refs: ["2.3", "2.3.a", "2.3.b", "2.3.c", "2.3.d", "2.3.e"]
+    objectives:
+      - "From a clean slate (addressing only), build a complete Phase 3 DMVPN: underlay, mGRE, NHRP, OSPF overlay, IPsec"
+      - "Configure the hub as NHS with dynamic registration, NHRP redirect, and multicast map for OSPF"
+      - "Configure spokes with NHRP shortcut, explicit NHS mapping, and static multicast map to the hub NBMA"
+      - "Secure all tunnels with IKEv1 PSK + IPsec profile"
+      - "Verify end-to-end: every spoke LAN reaches every other spoke LAN, spoke-to-spoke tunnels establish on demand, and all data is encrypted"
+      - "Demonstrate Phase 3 behavior contrasted with Phase 1 using traceroute and show dmvpn before/after shortcut resolution"
+
+  - number: 3
+    folder: "lab-03-capstone-troubleshooting"
+    title: "DMVPN Comprehensive Troubleshooting — Capstone II"
+    difficulty: "Advanced"
+    type: "capstone_ii"
+    clean_slate: true
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "R4"]
+    extends: null
+    blueprint_refs: ["2.3", "2.3.a", "2.3.b", "2.3.c", "2.3.d", "2.3.e"]
+    objectives:
+      - "Diagnose a broken DMVPN deployment layer by layer: underlay -> mGRE -> NHRP -> IPsec -> OSPF overlay -> Phase 3 behavior"
+      - "Use layer-appropriate show/debug commands: show ip route (underlay), show interface tunnel, show ip nhrp, show crypto isakmp sa, show crypto ipsec sa, show ip ospf neighbor, show dmvpn detail"
+      - "Separate control-plane faults (NHRP registration, OSPF adjacency, IKE phase 1) from data-plane faults (tunnel encapsulation, IPsec SA installation, CEF shortcut)"
+      - "Correct each fault with the minimum change required and re-verify end-to-end reachability and spoke-to-spoke shortcuts"
+      - "Document each fault with root cause, evidence, and remediation"

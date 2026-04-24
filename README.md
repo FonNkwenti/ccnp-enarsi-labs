@@ -79,10 +79,10 @@ MPLS and Layer 3 VPN (MPLS forwarding, LDP, LSP, MP-BGP, VRF, route distinguishe
 
 DMVPN (Dynamic Multipoint VPN) — single-hub topology (GRE, mGRE, NHRP, IPsec, spoke-to-spoke shortcut). **4 labs.** *Requires: ospf*
 
-- [ ] lab-00-phase1-hub-spoke — DMVPN Phase 1 (GRE/mGRE, NHRP hub-and-spoke mode)
-- [ ] lab-01-phase3-shortcuts — DMVPN Phase 3 (spoke-to-spoke shortcuts), IPsec protection
-- [ ] lab-02-capstone-config — Capstone I: Full DMVPN configuration challenge
-- [ ] lab-03-capstone-troubleshooting — Capstone II: Comprehensive DMVPN troubleshooting
+- [ ] `lab-00-phase1-hub-spoke` — DMVPN Phase 1 — Hub-and-Spoke with mGRE and NHRP
+- [ ] `lab-01-phase3-shortcuts` — DMVPN Phase 3 — Spoke-to-Spoke Shortcuts with IPsec Protection
+- [ ] `lab-02-capstone-config` — DMVPN Full Configuration Mastery — Capstone I
+- [ ] `lab-03-capstone-troubleshooting` — DMVPN Comprehensive Troubleshooting — Capstone II
 
 ### infrastructure-security
 
