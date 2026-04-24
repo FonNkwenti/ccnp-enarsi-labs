@@ -1,7 +1,7 @@
 topic: mpls-l3vpn
 topic_name: "MPLS and Layer 3 VPN"
 exam: "300-410"
-version: 1.0
+version: 1.1
 
 meta:
   created:
@@ -9,68 +9,94 @@ meta:
     agent: claude-haiku-4-5-20251001
     skill: spec-creator
     skill_version: "2026-04-24"
-  updated: []
+  updated:
+    - date: "2026-04-24"
+      agent: claude-haiku-4-5-20251001
+      skill: spec-creator
+      note: "Refactor: single customer VRF (CUST-A) for end-to-end L3VPN reachability; interface-level IP plan; fault catalog moved to spec.md."
 
 core_topology:
   devices:
     - name: R1
       platform: iosv
-      role: "Provider Edge (PE) — VRF-A host"
-      loopback0: "10.0.1.1/32"
+      role: "Provider Edge (PE1) — attaches CE1 in VRF CUST-A"
+      loopback0: "10.0.0.1/32"
       console_port: null
 
     - name: R2
       platform: iosv
-      role: "Provider core (P) — MPLS backbone router"
-      loopback0: "10.0.2.1/32"
+      role: "Provider core (P) — MPLS LSR, no customer attachment"
+      loopback0: "10.0.0.2/32"
       console_port: null
 
     - name: R3
       platform: iosv
-      role: "Provider Edge (PE) — VRF-B host"
-      loopback0: "10.0.3.1/32"
+      role: "Provider Edge (PE2) — attaches CE2 in VRF CUST-A"
+      loopback0: "10.0.0.3/32"
       console_port: null
 
   links:
     - id: L1
       source: "R1:Gi0/1"
       target: "R2:Gi0/1"
-      subnet: "172.16.12.0/24"
+      subnet: "10.12.0.0/30"
+      notes: "SP backbone PE1<->P; OSPF area 0; LDP enabled"
 
     - id: L2
       source: "R2:Gi0/2"
       target: "R3:Gi0/1"
-      subnet: "172.16.23.0/24"
+      subnet: "10.23.0.0/30"
+      notes: "SP backbone P<->PE2; OSPF area 0; LDP enabled"
 
 optional_devices:
   - name: R4
     platform: iosv
-    role: "Customer Edge (CE) — VRF-A customer"
-    loopback0: "192.168.1.1/32"
+    role: "Customer Edge (CE1) — customer site A1, AS 65001"
+    loopback0: "192.168.4.4/32"
     console_port: null
     available_from: "lab-01-capstone-config"
-    purpose: "Demonstrates PE-CE relationship for VRF-A; attached to R1"
+    purpose: "CE1 attached to R1 Gi0/2; eBGP PE-CE with PE1; same VRF as CE2 for end-to-end VPN reachability"
 
   - name: R5
     platform: iosv
-    role: "Customer Edge (CE) — VRF-B customer"
-    loopback0: "192.168.2.1/32"
+    role: "Customer Edge (CE2) — customer site A2, AS 65002"
+    loopback0: "192.168.5.5/32"
     console_port: null
     available_from: "lab-01-capstone-config"
-    purpose: "Demonstrates PE-CE relationship for VRF-B; attached to R3"
+    purpose: "CE2 attached to R3 Gi0/2; eBGP PE-CE with PE2; same VRF as CE1 for end-to-end VPN reachability"
 
 optional_links:
   - id: L3
     source: "R1:Gi0/2"
     target: "R4:Gi0/0"
-    subnet: "10.1.14.0/24"
+    subnet: "10.14.0.0/30"
     available_from: "lab-01-capstone-config"
+    notes: "PE1-CE1 attachment in VRF CUST-A; eBGP AS 65000 <-> 65001"
 
   - id: L4
     source: "R3:Gi0/2"
     target: "R5:Gi0/0"
-    subnet: "10.1.35.0/24"
+    subnet: "10.35.0.0/30"
     available_from: "lab-01-capstone-config"
+    notes: "PE2-CE2 attachment in VRF CUST-A; eBGP AS 65000 <-> 65002"
+
+addressing_plan:
+  sp_asn: 65000
+  igp: "OSPF process 1, area 0 on all SP backbone interfaces and Loopback0"
+  ldp_router_id_source: "Loopback0"
+  mp_bgp:
+    rr_topology: "Full-mesh iBGP between R1 and R3 (2 PEs); no RR required at this scale"
+    address_families: ["vpnv4 unicast"]
+    update_source: "Loopback0"
+  vrf:
+    name: "CUST-A"
+    rd: "65000:100"
+    rt_import: "65000:100"
+    rt_export: "65000:100"
+  customer:
+    ce1_asn: 65001
+    ce2_asn: 65002
+    rationale: "Different customer ASNs keep eBGP PE-CE straightforward (no as-override/allowas-in)."
 
 labs:
   - number: 0
@@ -83,12 +109,13 @@ labs:
     clean_slate: false
     blueprint_refs: ["2.1", "2.2"]
     objectives:
-      - "Configure MPLS and LDP on SP backbone (R1-R2-R3) to establish LSPs"
-      - "Understand LSR roles (R1, R3 as PE; R2 as P) and label forwarding"
-      - "Configure VRFs on PEs (R1, R3) and route-targets for L3VPN"
-      - "Demonstrate MP-BGP VPNv4 route advertisement between PEs (without CEs)"
-      - "Verify MPLS forwarding plane (label distribution, LSP status, label bindings)"
-      - "Validate L3VPN control plane (VPNv4 routes, RT filtering)"
+      - "Bring up OSPF area 0 on the SP backbone (R1-R2-R3) with Loopback0 advertised"
+      - "Enable MPLS and LDP on backbone interfaces; verify LDP neighbors and LIB/LFIB population"
+      - "Trace a full LSP between PE loopbacks and identify LSR roles (R1/R3 as PE, R2 as P)"
+      - "Create VRF CUST-A on R1 and R3 with RD 65000:100 and matching RT import/export 65000:100"
+      - "Bring up MP-BGP VPNv4 between R1 and R3 using Loopback0 update-source"
+      - "Inject a test VPNv4 prefix on each PE via a static VRF route to Null0 and confirm it appears on the remote PE with the expected RD, RT, and VPN label"
+      - "Read and explain the output of show mpls forwarding-table, show mpls ldp neighbor, show bgp vpnv4 all, show ip route vrf CUST-A, and show ip cef vrf"
 
   - number: 1
     folder: "lab-01-capstone-config"
@@ -101,12 +128,13 @@ labs:
     extends: null
     blueprint_refs: ["2.1", "2.2"]
     objectives:
-      - "Build complete MPLS backbone (LSR roles, LDP, LSP establishment)"
-      - "Configure PE-CE routing for dual VRFs (R1↔R4 for VRF-A, R3↔R5 for VRF-B)"
-      - "Implement MP-BGP L3VPN (VRF, RD, RT, VPNv4 address family)"
-      - "Verify end-to-end customer connectivity across MPLS network (R4↔R5 via VPN)"
-      - "Demonstrate label operations at each layer (BGP, LDP, forwarding)"
-      - "Test redundancy or advanced MPLS features (e.g., segment routing introduction if time permits)"
+      - "From a clean slate, build the SP backbone: OSPF area 0 + MPLS/LDP on all SP interfaces"
+      - "Configure VRF CUST-A on both PEs and attach CE-facing interfaces to the VRF"
+      - "Configure eBGP PE-CE: R1<->R4 (65000<->65001) and R3<->R5 (65000<->65002) inside VRF CUST-A"
+      - "Configure MP-BGP VPNv4 between R1 and R3 and redistribute between VRF BGP and VPNv4"
+      - "Advertise CE loopbacks (192.168.4.4/32 on R4, 192.168.5.5/32 on R5) through the VPN"
+      - "Verify end-to-end reachability: ping/traceroute from R4 Lo0 to R5 Lo0 succeeds across the MPLS core"
+      - "Inspect the label stack at each hop (outer LDP transport label at R1; label swap at R2; VPN label pop and forward at R3)"
 
   - number: 2
     folder: "lab-02-capstone-troubleshooting"
@@ -119,15 +147,8 @@ labs:
     extends: null
     blueprint_refs: ["2.1", "2.2"]
     objectives:
-      - "Diagnose and resolve MPLS forwarding failures (LSP black holes, label mismatches)"
-      - "Troubleshoot LDP neighbor relationships and label distribution issues"
-      - "Fix VRF route leakage and RT filtering problems"
-      - "Resolve MP-BGP VPNv4 advertisement and path selection issues"
-      - "Debug PE-CE routing failures and VPN connectivity problems"
-      - "Validate label stacks and forwarding consistency across the network"
-    faults:
-      - "LDP disabled on one link (LSP incomplete)"
-      - "Incorrect route-target on one PE (VPN partition)"
-      - "MP-BGP not enabled for VPNv4 address family on one PE"
-      - "Interface IP address misconfiguration breaking CE-PE adjacency"
-      - "Loopback IP conflict causing routing inconsistency (requires detective work)"
+      - "Diagnose a broken L3VPN deployment layer by layer: IGP -> MPLS/LDP -> MP-BGP VPNv4 -> VRF/RT -> PE-CE"
+      - "Use targeted show/debug commands (show mpls ldp neighbor, show mpls forwarding-table, show bgp vpnv4 all, show ip route vrf, ping mpls) to localise each fault"
+      - "Distinguish control-plane faults (neighbor/adjacency/route advertisement) from data-plane faults (label imposition/swap/pop, LFIB mismatch)"
+      - "Correct each fault using the minimum change necessary and re-verify end-to-end reachability between CE loopbacks"
+      - "Document root cause, evidence, and remediation for every injected fault"
