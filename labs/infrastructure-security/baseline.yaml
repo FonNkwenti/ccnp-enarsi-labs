@@ -1,0 +1,232 @@
+topic: infrastructure-security
+topic_name: "Infrastructure Security"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-24"
+    agent: claude-sonnet-4-6
+    skill: spec-creator
+    skill_version: "2026-04-24"
+  updated: []
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "Target router — AAA client, ACL enforcer, CoPP enforcer. Central policy device for all three labs."
+      loopback0: "10.1.1.1/32"
+      console_port: null
+
+    - name: R2
+      platform: iosv
+      role: "OSPF/EIGRP neighbor — generates live control-plane traffic (hellos, LSAs) used to exercise CoPP; also source of test ACL traffic"
+      loopback0: "10.2.2.2/32"
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "eBGP peer (AS 65001) — generates BGP keepalives and opens; used to exercise CoPP BGP class-map"
+      loopback0: "10.3.3.3/32"
+      console_port: null
+
+    - name: Linux-Srv
+      platform: linux
+      role: "AAA server — runs FreeRADIUS (RADIUS) and tacacs+ daemon (TACACS+). Pre-configured as lab prerequisite."
+      loopback0: null
+      console_port: null
+      notes: "Ubuntu 20.04. FreeRADIUS installed via 'apt install freeradius'. TACACS+ via 'apt install tacacs+'. Both daemons configured before lab-00 begins."
+
+  links:
+    - id: L1
+      source: "R1:Gi0/1"
+      target: "R2:Gi0/1"
+      subnet: "10.12.0.0/30"
+      ipv6_subnet: "2001:db8:12::/64"
+      notes: "OSPF area 0 + EIGRP AS 100 (dual protocol for CoPP testing). R1=.1/.1, R2=.2/.2"
+
+    - id: L2
+      source: "R1:Gi0/2"
+      target: "R3:Gi0/1"
+      subnet: "10.13.0.0/30"
+      ipv6_subnet: "2001:db8:13::/64"
+      notes: "eBGP AS 65000 (R1) <-> AS 65001 (R3). R1=.1/.1, R3=.2/.2"
+
+    - id: L3
+      source: "R1:Gi0/3"
+      target: "Linux-Srv:eth0"
+      subnet: "192.168.100.0/30"
+      notes: "AAA management link. R1=.1, Linux-Srv=.2. Out-of-band management plane only."
+
+optional_devices: []
+
+optional_links: []
+
+addressing_plan:
+  ipv4:
+    loopbacks:
+      R1: "10.1.1.1/32"
+      R2: "10.2.2.2/32"
+      R3: "10.3.3.3/32"
+    links:
+      L1: "10.12.0.0/30 (R1=.1, R2=.2)"
+      L2: "10.13.0.0/30 (R1=.1, R3=.2)"
+      L3: "192.168.100.0/30 (R1=.1, Linux-Srv=.2)"
+
+  ipv6:
+    loopbacks:
+      R1: "2001:db8::1/128"
+      R2: "2001:db8::2/128"
+      R3: "2001:db8::3/128"
+    links:
+      L1: "2001:db8:12::/64 (R1=::1, R2=::2)"
+      L2: "2001:db8:13::/64 (R1=::1, R3=::2)"
+
+  aaa:
+    aaa_server_ip: "192.168.100.2"
+    tacacs_key: "TACACS-KEY"
+    radius_key: "RADIUS-KEY"
+    tacacs_daemon: "tacacs+ package (Ubuntu apt) — pre-configured before lab-00"
+    radius_daemon: "FreeRADIUS (Ubuntu apt) — pre-configured before lab-00"
+    local_user: "admin / Cisco123!"
+    method_order: "TACACS+ -> RADIUS -> local (lab-00 goal)"
+    rationale: "ISE is not installed on this EVE-NG host. Ubuntu 20.04 Linux VM provides both daemon types. Both are configured as a prerequisite step (not part of the lab timer) — the lab focuses on IOS AAA configuration, not Linux server administration."
+
+  routing:
+    ospf:
+      process: 1
+      area: 0
+      members: ["R1", "R2"]
+      interfaces: ["R1 Gi0/1", "R2 Gi0/1", "R1 Lo0", "R2 Lo0"]
+    eigrp:
+      mode: "named"
+      instance: "SECURITY"
+      asn: 100
+      members: ["R1", "R2"]
+      interfaces: ["R1 Gi0/1", "R2 Gi0/1"]
+      rationale: "Running OSPF and EIGRP simultaneously on L1 gives CoPP both protocol hellos to police in one lab, with minimal config overhead."
+    bgp:
+      r1_asn: 65000
+      r3_asn: 65001
+      session: "R1 <-> R3 over L2 (10.13.0.0/30)"
+
+  copp:
+    protected_protocols: ["OSPF", "EIGRP", "BGP", "SSH", "Telnet", "HTTP", "HTTPS", "SNMP"]
+    class_maps:
+      - class: COPP-SSH-TELNET
+        match: "access-group (SSH/Telnet ACL)"
+        police_rate: "128000 bps"
+      - class: COPP-HTTP
+        match: "access-group (HTTP/HTTPS ACL)"
+        police_rate: "32000 bps"
+      - class: COPP-SNMP
+        match: "access-group (SNMP ACL)"
+        police_rate: "32000 bps"
+      - class: COPP-ROUTING
+        match: "access-group (OSPF+EIGRP+BGP ACL)"
+        police_rate: "1000000 bps"
+      - class: class-default
+        match: "any remaining"
+        police_rate: "8000 bps"
+    rationale: "R2 generates real OSPF/EIGRP control plane traffic (no simulation needed). R3 generates real BGP keepalives. SSH/Telnet/SNMP tested by initiating sessions from R2/R3 to R1."
+
+  fhs_scope:
+    blueprint_ref: "3.4"
+    status: "describe-only — no buildable demo"
+    rationale: "IOSvL2 FHS command support (ipv6 nd raguard, ipv6 dhcp guard, ipv6 snooping policy) is unverifiable without a live node test. VPC nodes cannot generate rogue RAs or DHCPv6 offers needed to validate guard policies. Feature is covered conceptually in lab-02 workbook with CLI reference and show-command output drawn from documentation."
+    features_described: ["RA Guard", "DHCP Guard", "Binding Table (SISF)", "ND Inspection/Snooping", "IPv6 Source Guard"]
+
+labs:
+  - number: 0
+    folder: "lab-00-aaa"
+    title: "IOS AAA (TACACS+, RADIUS, local authentication)"
+    difficulty: "Foundation"
+    type: "progressive"
+    time_minutes: 75
+    devices: ["R1", "Linux-Srv"]
+    clean_slate: false
+    blueprint_refs: ["3.1"]
+    objectives:
+      - "Configure local AAA database on R1: aaa new-model, username admin privilege 15 secret Cisco123!"
+      - "Configure TACACS+ server group pointing to Linux-Srv (192.168.100.2, key TACACS-KEY)"
+      - "Configure RADIUS server group pointing to Linux-Srv (192.168.100.2, key RADIUS-KEY)"
+      - "Build method list: aaa authentication login default group tacacs+ group radius local — TACACS+ first, RADIUS fallback, local last"
+      - "Apply method list to console and VTY lines; test login with a TACACS+ account"
+      - "Simulate TACACS+ server failure (shut Linux-Srv daemon or block port) — confirm login falls through to RADIUS, then to local"
+      - "Verify with show aaa servers, show aaa sessions, debug aaa authentication"
+      - "Understand: TACACS+ encrypts the full packet (including username); RADIUS encrypts only the password — both deliver authentication, authorization, and accounting but with different security models"
+
+  - number: 1
+    folder: "lab-01-acls-urpf"
+    title: "ACLs (IPv4/IPv6, time-based) and uRPF"
+    difficulty: "Intermediate"
+    type: "progressive"
+    time_minutes: 90
+    devices: ["R1", "R2", "R3"]
+    clean_slate: false
+    extends: "lab-00-aaa"
+    blueprint_refs: ["3.2", "3.2.a", "3.2.b", "3.2.c"]
+    objectives:
+      - "Bring up OSPF area 0 on L1 and eBGP on L2 (building on lab-00 base config)"
+      - "Write an extended IPv4 ACL: permit specific source/destination/port combinations; deny a specific TCP port (e.g., Telnet 23); apply inbound on R1 Gi0/1"
+      - "Write a standard IPv4 ACL that permits only R2 Lo0 (10.2.2.2) to reach R1 management VTYs; apply to VTY lines with access-class"
+      - "Write a time-based IPv4 ACL: permit HTTP (port 80) only Mon-Fri 08:00-18:00; test during and outside the time window"
+      - "Configure dual-stack IPv6 addresses on L1 and L2; write an IPv6 traffic filter (ipv6 access-list) blocking ICMPv6 echo-requests from 2001:db8:12::/64; apply inbound on R1 Gi0/1"
+      - "Enable uRPF strict mode on R1 Gi0/1 (facing R2): ip verify unicast source reachable-via rx. Generate traffic with a spoofed source from R2 — confirm uRPF drops it"
+      - "Switch to uRPF loose mode and observe difference in dropped packet behavior"
+      - "Verify with show ip access-lists, show ipv6 access-list, show ip verify unicast source, show clock (time-based ACL)"
+
+  - number: 2
+    folder: "lab-02-copp-ipv6-fhs"
+    title: "CoPP, IPv6 First Hop Security (RA guard, DHCP guard, binding table, ND inspection/snooping)"
+    difficulty: "Intermediate"
+    type: "progressive"
+    time_minutes: 105
+    devices: ["R1", "R2", "R3"]
+    clean_slate: false
+    extends: "lab-01-acls-urpf"
+    blueprint_refs: ["3.3", "3.4"]
+    objectives:
+      - "Define CoPP class-maps on R1 using MQC: COPP-ROUTING (OSPF+EIGRP+BGP ACL match), COPP-SSH-TELNET, COPP-HTTP, COPP-SNMP"
+      - "Build policy-map COPP-POLICY: each class polices at the appropriate rate (routing at 1 Mbps, management protocols at 128 Kbps, default at 8 Kbps)"
+      - "Apply service-policy input COPP-POLICY under the control-plane sub-interface"
+      - "Verify R2's OSPF/EIGRP hellos and R3's BGP keepalives are conforming (rate within police limit) using show policy-map control-plane"
+      - "Simulate a rate burst from R2 (e.g., rapid SSH attempts or SNMP polls) and observe the drop counter on the COPP-SSH-TELNET class"
+      - "IPv6 FHS (describe-only): read the binding table concept (SISF — Source IP, Source MAC, VLAN, interface), RA guard (drop RAs on access ports), DHCP guard (drop DHCPv6 server replies on access ports), ND inspection, source guard. Show reference CLI for each feature. Note: buildable FHS demo requires L2 switch + rogue-host VM not in this topology."
+      - "Verify with show policy-map control-plane (conforming/exceeding/violating counters), show ip access-lists (CoPP ACLs hit counts)"
+
+  - number: 3
+    folder: "lab-03-capstone-config"
+    title: "Infrastructure Security Full Configuration Mastery — Capstone I"
+    difficulty: "Advanced"
+    type: "capstone_i"
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "Linux-Srv"]
+    clean_slate: true
+    blueprint_refs: ["3.1", "3.2", "3.2.a", "3.2.b", "3.2.c", "3.3", "3.4"]
+    objectives:
+      - "From a clean slate, bring up OSPF area 0 on L1, EIGRP named-mode on L1, and eBGP on L2"
+      - "Configure IOS AAA on R1: new-model, TACACS+ and RADIUS server groups pointing to Linux-Srv, method list with correct fallback order, applied to console and VTY"
+      - "Write and apply a layered ACL policy: extended IPv4 ACL filtering inbound on Gi0/1, VTY access-class restricting management to R2 Lo0, time-based ACL restricting one service by schedule, IPv6 traffic filter on Gi0/2"
+      - "Enable uRPF strict mode on R1 Gi0/1 and confirm spoofed-source packets are dropped"
+      - "Design and apply a full CoPP policy-map covering all 5 class categories (routing protocols, SSH/Telnet, HTTP/HTTPS, SNMP, default); set appropriate police rates so routing adjacencies remain up"
+      - "Verify end-state: routing adjacencies up, AAA login works via TACACS+ and falls back to local, ACLs hit on expected traffic, uRPF drops spoofed source, CoPP shows conforming routing protocol traffic"
+
+  - number: 4
+    folder: "lab-04-capstone-troubleshooting"
+    title: "Infrastructure Security Comprehensive Troubleshooting — Capstone II"
+    difficulty: "Advanced"
+    type: "capstone_ii"
+    time_minutes: 120
+    devices: ["R1", "R2", "R3", "Linux-Srv"]
+    clean_slate: true
+    blueprint_refs: ["3.1", "3.2", "3.2.a", "3.2.b", "3.2.c", "3.3", "3.4"]
+    objectives:
+      - "Diagnose a broken infrastructure security deployment layer by layer: AAA authentication failure -> ACL blocking legitimate traffic -> uRPF dropping valid routes -> CoPP rate-limiting routing protocols -> IPv6 filter mis-configured"
+      - "Use show aaa servers, show aaa sessions, debug aaa authentication to identify TACACS+/RADIUS misconfiguration"
+      - "Use show ip access-lists, show ipv6 access-list, show interfaces counters to identify ACL blocking legitimate traffic or applying in wrong direction"
+      - "Use show ip verify unicast source to identify uRPF mode mismatch causing asymmetric-path drops"
+      - "Use show policy-map control-plane to identify a CoPP class that is rate-limiting a routing protocol below the threshold needed to maintain adjacency (symptom: OSPF neighbor flapping)"
+      - "Correct each fault with the minimum change required and re-verify that routing adjacencies are stable, management access works, and security policies are enforced correctly"
+      - "Document root cause, evidence, and remediation for every injected fault"
