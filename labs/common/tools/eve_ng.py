@@ -74,6 +74,59 @@ def _eve_session(host: str, username: str = "admin", password: str = "eve") -> r
     return session
 
 
+def find_open_lab(
+    host: str,
+    node_names: list[str] | None = None,
+    username: str = "admin",
+    password: str = "eve",
+) -> str | None:
+    """Return the path of the lab that currently has running nodes.
+
+    Walks all EVE-NG folders and returns the first lab whose running nodes
+    match node_names (if provided) or any lab with at least one running node.
+    Designed for single-lab workflows where the student starts the lab in the
+    UI then runs this script — no .unl filename or path needed.
+    """
+    session = _eve_session(host, username, password)
+
+    def _collect_labs(folder_path: str) -> list[str]:
+        url = f"http://{host}/api/folders/{folder_path}" if folder_path else f"http://{host}/api/folders/"
+        try:
+            resp = session.get(url, timeout=10)
+            if resp.status_code != 200:
+                return []
+        except requests.RequestException:
+            return []
+
+        data = resp.json().get("data", {})
+        paths = [lab.get("path", "").lstrip("/") for lab in data.get("labs", [])]
+        for subfolder in data.get("folders", []):
+            if subfolder.get("name") == "..":
+                continue
+            paths.extend(_collect_labs(subfolder.get("path", "").lstrip("/")))
+        return paths
+
+    for lab_path in _collect_labs(""):
+        try:
+            resp = session.get(f"http://{host}/api/labs/{lab_path}/nodes", timeout=10)
+            if resp.status_code != 200:
+                continue
+            nodes = resp.json().get("data", {})
+            running_names = {
+                node.get("name")
+                for node in nodes.values()
+                if node.get("status", 0) == 2
+            }
+            if not running_names:
+                continue
+            if node_names is None or set(node_names).issubset(running_names):
+                return lab_path
+        except requests.RequestException:
+            continue
+
+    return None
+
+
 def discover_ports(
     host: str,
     lab_path: str,
