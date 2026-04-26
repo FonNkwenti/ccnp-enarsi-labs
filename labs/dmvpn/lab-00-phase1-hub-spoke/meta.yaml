@@ -1,0 +1,42 @@
+# Auto-generated — do not edit manually. Use /tag-lab to stamp external agent runs.
+lab: lab-00-phase1-hub-spoke
+chapter: dmvpn
+exam: 300-410
+devices:
+  - name: R1
+    platform: iosv
+    role: DMVPN Hub / NHS (HQ)
+  - name: R2
+    platform: iosv
+    role: Spoke 1 — Branch A
+  - name: R3
+    platform: iosv
+    role: Spoke 2 — Branch B
+  - name: R4
+    platform: iosv
+    role: Simulated ISP/Transit
+created:
+  date: "2026-04-25"
+  agent: claude-haiku-4-5-20251001
+  skill: lab-assembler
+  skill_version: "2026-04-25"
+  files:
+    - workbook.md
+    - README.md
+    - setup_lab.py
+    - topology/topology.drawio
+    - topology/README.md
+    - initial-configs/R1.cfg
+    - initial-configs/R2.cfg
+    - initial-configs/R3.cfg
+    - initial-configs/R4.cfg
+    - solutions/R1.cfg
+    - solutions/R2.cfg
+    - solutions/R3.cfg
+    - solutions/R4.cfg
+    - scripts/fault-injection/inject_scenario_01.py
+    - scripts/fault-injection/inject_scenario_02.py
+    - scripts/fault-injection/inject_scenario_03.py
+    - scripts/fault-injection/apply_solution.py
+    - scripts/fault-injection/README.md
+updated: []
