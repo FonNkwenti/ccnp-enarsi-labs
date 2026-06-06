@@ -1,0 +1,213 @@
+exam:
+  name: "Implementing Cisco Enterprise Advanced Routing and Services"
+  code: "300-410"
+  blueprint_version: "v1.1 (2025)"
+  blueprint_source: "blueprint/300-410/blueprint.md"
+  total_objectives: 25
+  planned_date: "2026-04-22"
+
+topics:
+  - topic_id: eigrp
+    topic_name: "EIGRP Routing"
+    blueprint_refs:
+      - "1.9"
+      - "1.9.a"
+      - "1.9.b"
+      - "1.9.c"
+      - "1.9.d"
+      - "1.9.e"
+      - "1.9.f"
+    estimated_labs: 6
+    scope_notes: "Covers classic and named mode, dual-stack IPv4/IPv6, VRF and global, neighbor/authentication, DUAL (successor/feasible successor/SIA), stubs, equal/unequal cost load balancing, metrics (classic + wide). DUAL and stubs paired in one lab; load-balancing and metrics paired in one lab."
+    dependencies: []
+    build_order: 1
+
+  - topic_id: ospf
+    topic_name: "OSPF Routing (v2 and v3)"
+    blueprint_refs:
+      - "1.10"
+      - "1.10.a"
+      - "1.10.b"
+      - "1.10.c"
+      - "1.10.c.i"
+      - "1.10.c.ii"
+      - "1.10.c.iii"
+      - "1.10.c.iv"
+      - "1.10.d"
+    estimated_labs: 7
+    scope_notes: "Covers OSPFv2 and OSPFv3, dual-stack IPv4/IPv6, neighbor/authentication, network types (P2P, multipoint, broadcast, NBMA), area types (backbone, normal, transit, stub, totally stub, NSSA), router roles (internal, backbone, ABR, ASBR), virtual links, path preference."
+    dependencies: []
+    build_order: 2
+
+  - topic_id: bgp
+    topic_name: "BGP Routing (iBGP and eBGP)"
+    blueprint_refs:
+      - "1.11"
+      - "1.11.a"
+      - "1.11.b"
+      - "1.11.c"
+      - "1.11.d"
+      - "1.11.e"
+    estimated_labs: 6
+    scope_notes: "Covers iBGP/eBGP, unicast and VRF-Lite, dual-stack, neighbor relationships (next-hop, multihop, 4-byte AS, private AS, route refresh, sync, peer groups, states/timers), authentication, best-path attributes, route reflectors (single RR scope), inbound/outbound filtering and path manipulation policies. RR + policies paired in one lab."
+    dependencies: []
+    build_order: 3
+
+  - topic_id: route-control
+    topic_name: "Route Control and Redistribution"
+    blueprint_refs:
+      - "1.1"
+      - "1.2"
+      - "1.3"
+      - "1.4"
+      - "1.5"
+    estimated_labs: 6
+    scope_notes: "Covers administrative distance troubleshooting across protocols, route maps (attributes/tagging/filtering), loop prevention (filtering, tagging, split horizon, route poisoning, downward bit), redistribution between any routing sources (including connected/static/protocol→protocol), and manual + auto-summarization behaviors. Redistribution and summarization paired in one lab. Requires EIGRP, OSPF, and BGP topics complete."
+    dependencies:
+      - eigrp
+      - ospf
+      - bgp
+    build_order: 4
+
+  - topic_id: pbr-vrf-bfd
+    topic_name: "Policy Routing, VRF-Lite, and BFD"
+    blueprint_refs:
+      - "1.6"
+      - "1.7"
+      - "1.8"
+    estimated_labs: 4
+    scope_notes: "Three standalone Layer 3 services grouped together. PBR + BFD paired in one lab (BFD accelerates next-hop tracking for PBR). VRF-Lite with inter-VRF leaking in a second lab. 1.8 BFD is describe-only but demonstrated with sub-second convergence timing."
+    dependencies:
+      - ospf
+      - bgp
+    build_order: 5
+
+  - topic_id: mpls-l3vpn
+    topic_name: "MPLS and Layer 3 VPN"
+    blueprint_refs:
+      - "2.1"
+      - "2.2"
+    estimated_labs: 3
+    scope_notes: "Both bullets are describe-only. Minimum-sized topic: one combined MPLS forwarding plane + MP-BGP L3VPN walkthrough (LSR/LDP/LSP + VRF/RD/RT/vpnv4), plus Capstone I and Capstone II. Requires BGP topic complete (MP-BGP)."
+    dependencies:
+      - bgp
+    build_order: 6
+
+  - topic_id: dmvpn
+    topic_name: "DMVPN (single hub)"
+    blueprint_refs:
+      - "2.3"
+      - "2.3.a"
+      - "2.3.b"
+      - "2.3.c"
+      - "2.3.d"
+      - "2.3.e"
+    estimated_labs: 4
+    scope_notes: "Single-hub DMVPN. Lab 1: Phase 1 (GRE/mGRE + NHRP hub-and-spoke). Lab 2: Phase 3 (spoke-to-spoke shortcut) + IPsec protection. OSPF used as overlay IGP in labs."
+    dependencies:
+      - ospf
+    build_order: 7
+
+  - topic_id: infrastructure-security
+    topic_name: "Infrastructure Security"
+    blueprint_refs:
+      - "3.1"
+      - "3.2"
+      - "3.2.a"
+      - "3.2.b"
+      - "3.2.c"
+      - "3.3"
+      - "3.4"
+    estimated_labs: 5
+    scope_notes: "Lab 1: IOS AAA (TACACS+, RADIUS, local). Lab 2: ACLs v4/v6 + time-based + uRPF. Lab 3: CoPP + IPv6 First Hop Security (RA guard, DHCP guard, binding table, ND inspection/snooping, source guard). 3.4 is describe-only but demo of FHS is included. Standalone topic; can be scheduled earlier if desired."
+    dependencies: []
+    build_order: 8
+
+  - topic_id: infrastructure-services
+    topic_name: "Infrastructure Services"
+    blueprint_refs:
+      - "4.1"
+      - "4.1.a"
+      - "4.1.b"
+      - "4.1.c"
+      - "4.2"
+      - "4.3"
+      - "4.4"
+      - "4.5"
+      - "4.6"
+      - "4.7"
+    estimated_labs: 6
+    scope_notes: "Merged topic covering all of Domain 4. Lab 1: Device management planes (console/VTY, Telnet/HTTP(S)/SSH/SCP/(T)FTP). Lab 2: SNMP v2c/v3 + Syslog/logging/debugs/timestamps/telemetry (observability pair). Lab 3: DHCP (IPv4/IPv6 client/server/relay/options). Lab 4: IP SLA + object tracking + NetFlow v9/Flexible NetFlow/IPFIX (monitoring pair). 4.7 Cisco Catalyst Center Assurance CANNOT be labbed in EVE-NG (requires the appliance) — covered as a conceptual section embedded in the Lab 4 workbook with screenshots, not a runnable lab."
+    dependencies: []
+    build_order: 9
+
+coverage_matrix:
+  "1.1": route-control
+  "1.2": route-control
+  "1.3": route-control
+  "1.4": route-control
+  "1.5": route-control
+  "1.6": pbr-vrf-bfd
+  "1.7": pbr-vrf-bfd
+  "1.8": pbr-vrf-bfd
+  "1.9": eigrp
+  "1.9.a": eigrp
+  "1.9.b": eigrp
+  "1.9.c": eigrp
+  "1.9.d": eigrp
+  "1.9.e": eigrp
+  "1.9.f": eigrp
+  "1.10": ospf
+  "1.10.a": ospf
+  "1.10.b": ospf
+  "1.10.c": ospf
+  "1.10.c.i": ospf
+  "1.10.c.ii": ospf
+  "1.10.c.iii": ospf
+  "1.10.c.iv": ospf
+  "1.10.d": ospf
+  "1.11": bgp
+  "1.11.a": bgp
+  "1.11.b": bgp
+  "1.11.c": bgp
+  "1.11.d": bgp
+  "1.11.e": bgp
+  "2.1": mpls-l3vpn
+  "2.2": mpls-l3vpn
+  "2.3": dmvpn
+  "2.3.a": dmvpn
+  "2.3.b": dmvpn
+  "2.3.c": dmvpn
+  "2.3.d": dmvpn
+  "2.3.e": dmvpn
+  "3.1": infrastructure-security
+  "3.2": infrastructure-security
+  "3.2.a": infrastructure-security
+  "3.2.b": infrastructure-security
+  "3.2.c": infrastructure-security
+  "3.3": infrastructure-security
+  "3.4": infrastructure-security
+  "4.1": infrastructure-services
+  "4.1.a": infrastructure-services
+  "4.1.b": infrastructure-services
+  "4.1.c": infrastructure-services
+  "4.2": infrastructure-services
+  "4.3": infrastructure-services
+  "4.4": infrastructure-services
+  "4.5": infrastructure-services
+  "4.6": infrastructure-services
+  "4.7": infrastructure-services
+
+summary:
+  total_topics: 9
+  total_estimated_labs: 47
+  build_order:
+    - eigrp
+    - ospf
+    - bgp
+    - route-control
+    - pbr-vrf-bfd
+    - mpls-l3vpn
+    - dmvpn
+    - infrastructure-security
+    - infrastructure-services
