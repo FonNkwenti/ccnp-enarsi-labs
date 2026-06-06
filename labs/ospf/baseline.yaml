@@ -1,0 +1,227 @@
+topic: ospf
+topic_name: "OSPF Routing (v2 and v3)"
+exam: "300-410"
+version: 1.1
+
+meta:
+  created:
+    date: "2026-04-23"
+    agent: claude-opus-4-7
+    skill: spec-creator
+    skill_version: "2026-04-12"
+  updated:
+    - date: "2026-04-23"
+      agent: claude-opus-4-7
+      change: "Expanded Area 2 to two routers by adding R5; moved ASBR role from R4 to R5; switched Lab 00 authentication to HMAC-SHA-256 key-chain (modern from day one)."
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "Area 0 internal router (backbone router, non-ABR)"
+      loopback0: 10.1.1.1/32
+      loopback0_v6: 2001:db8:1::1/128
+      console_port: null
+
+    - name: R2
+      platform: iosv
+      role: "ABR between Area 0 and Area 1; anchors virtual link from Lab 03"
+      loopback0: 10.2.2.2/32
+      loopback0_v6: 2001:db8:2::2/128
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "Area 1 internal router; Lab 03 onward also transits the virtual link between R2 and R4"
+      loopback0: 10.3.3.3/32
+      loopback0_v6: 2001:db8:3::3/128
+      console_port: null
+
+  links:
+    - id: L1
+      source: R1:GigabitEthernet0/0
+      target: R2:GigabitEthernet0/0
+      subnet: 10.0.12.0/30
+      subnet_v6: 2001:db8:0:12::/64
+      ospf_area: 0
+
+    - id: L2
+      source: R2:GigabitEthernet0/1
+      target: R3:GigabitEthernet0/0
+      subnet: 10.0.23.0/30
+      subnet_v6: 2001:db8:0:23::/64
+      ospf_area: 1
+
+optional_devices:
+  - name: R4
+    platform: iosv
+    role: "Pure ABR(1↔2) — Area 1 side faces R3, Area 2 side faces R5; performs N-bit Type-7→Type-5 translation for R5's external"
+    loopback0: 10.4.4.4/32
+    loopback0_v6: 2001:db8:4::4/128
+    console_port: null
+    available_from: lab-03-area-types-virtual-link
+    purpose: "ABR that joins Area 2 to Area 1, terminates the R2↔R4 virtual link, and translates the Type-7 LSA originated by R5 into a Type-5 for the backbone."
+
+  - name: R5
+    platform: iosv
+    role: "Area 2 internal router and ASBR — redistributes Lo100 (172.16.100.0/24) as E2 external"
+    loopback0: 10.5.5.5/32
+    loopback0_v6: 2001:db8:5::5/128
+    loopback100: 172.16.100.0/24
+    console_port: null
+    available_from: lab-03-area-types-virtual-link
+    purpose: "ASBR inside Area 2 (NSSA) that originates Type-7 LSAs; the Type-7→Type-5 translation then happens at a different router (R4), making the N-bit ABR behavior directly observable."
+
+optional_links:
+  - id: L3
+    source: R3:GigabitEthernet0/1
+    target: R4:GigabitEthernet0/0
+    subnet: 10.0.34.0/30
+    subnet_v6: 2001:db8:0:34::/64
+    ospf_area: 1
+    available_from: lab-03-area-types-virtual-link
+
+  - id: L4
+    source: R4:GigabitEthernet0/1
+    target: R5:GigabitEthernet0/0
+    subnet: 10.0.45.0/30
+    subnet_v6: 2001:db8:0:45::/64
+    ospf_area: 2
+    available_from: lab-03-area-types-virtual-link
+
+virtual_link_reservation:
+  # Configured in Lab 03 and kept active through subsequent labs + capstones.
+  endpoint_a: R2   # ABR already in Area 0 and Area 1
+  endpoint_b: R4   # ABR in Area 1 and Area 2
+  transit_area: 1
+  available_from: lab-03-area-types-virtual-link
+
+authentication:
+  ospfv2:
+    # Used from Lab 00 onward. Modern by default.
+    mode: "key-chain HMAC-SHA-256"
+    key_chain_name: ENARSI-OSPF-KC
+    key_id: 1
+    cryptographic_algorithm: hmac-sha-256
+  ospfv3:
+    # Added at Lab 04 alongside AF activation.
+    mode: "IPsec per-interface"
+    algorithm: sha1
+    spi_base: 500   # Per-interface SPI allocated sequentially (500, 501, ...)
+
+labs:
+  - number: 0
+    folder: lab-00-single-area-foundation
+    title: "OSPFv2 Single-Area Foundation"
+    difficulty: Foundation
+    type: progressive
+    time_minutes: 60
+    devices: [R1, R2]
+    blueprint_refs: ["1.10", "1.10.b", "1.10.c.iii"]
+    objectives:
+      - "Bring up OSPFv2 process 1 in Area 0 between R1 and R2 over the 10.0.12.0/30 link, advertising both loopbacks."
+      - "Verify neighbor state progression (Init → 2-Way → ExStart → Exchange → Loading → Full) with show ip ospf neighbor and debug ip ospf adj."
+      - "Configure HMAC-SHA-256 authentication via a key-chain (cryptographic-algorithm hmac-sha-256) and bind it to the R1↔R2 interfaces with ip ospf authentication key-chain ENARSI-OSPF-KC — do NOT use MD5."
+      - "Verify authentication is active with show ip ospf interface and confirm SEQ reset on key-id change."
+      - "Classify R1 and R2 as internal / backbone routers (both Area 0 only) and confirm router-type fields via show ip ospf."
+      - "Diagnose a deliberately-mismatched area-ID, hello/dead timer, or key-chain entry to reinforce the modern adjacency fault classes."
+
+  - number: 1
+    folder: lab-01-multi-area-path-preference
+    title: "Multi-Area OSPFv2 and Path Preference"
+    difficulty: Foundation
+    type: progressive
+    time_minutes: 75
+    devices: [R1, R2, R3]
+    extends: lab-00-single-area-foundation
+    blueprint_refs: ["1.10", "1.10.c.iii", "1.10.d"]
+    objectives:
+      - "Activate OSPFv2 on R3 and add the R2↔R3 link to Area 1 — promoting R2 to ABR (Area 0 ↔ Area 1). Reuse the Lab 00 key-chain for HMAC-SHA-256 auth on the new link."
+      - "Confirm R2's role transition with show ip ospf — ABR flag set; LSDB now contains Type-1, Type-2, and Type-3 Summary LSAs."
+      - "Advertise R3's loopback into Area 1 and observe R1 install it as an O IA (inter-area) route with the expected cost. From R3, R1's loopback also appears as O IA."
+      - "Demonstrate intra-area > inter-area preference by injecting an equivalent inter-area summary that competes with an intra-area path; confirm the intra-area route wins regardless of lower inter-area cost."
+      - "Read show ip ospf border-routers to confirm the shortest path tree to ABR/ASBR candidates. (External preference E1/E2 is deferred to Lab 03 once R5 ASBR is online.)"
+
+  - number: 2
+    folder: lab-02-network-types
+    title: "OSPF Network Types"
+    difficulty: Intermediate
+    type: progressive
+    time_minutes: 75
+    devices: [R1, R2, R3]
+    extends: lab-01-multi-area-path-preference
+    blueprint_refs: ["1.10.c", "1.10.c.i"]
+    objectives:
+      - "Identify the default OSPF network type on the R1↔R2 Ethernet link (broadcast) and observe DR/BDR election via show ip ospf interface."
+      - "Change the R1↔R2 type to point-to-point and verify DR/BDR election disappears, hello timer drops to 10s, and the Type-2 Network LSA vanishes from the LSDB."
+      - "Change to non-broadcast — adjacency fails until explicit neighbor statements are added under router ospf; verify unicast hellos replace multicast."
+      - "Change to point-to-multipoint — no DR/BDR, no neighbor command required, /32 host routes appear in the RIB for each neighbor loopback."
+      - "Commit point-to-point as the final type on R1↔R2 (carried into subsequent labs); document the table of four types with their timer defaults and DR/neighbor requirements."
+
+  - number: 3
+    folder: lab-03-area-types-virtual-link
+    title: "Area Types, Virtual Link, and ASBR"
+    difficulty: Advanced
+    type: progressive
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5]
+    extends: lab-02-network-types
+    blueprint_refs: ["1.10.c.ii", "1.10.c.iii", "1.10.c.iv"]
+    objectives:
+      - "Activate R4 and R5 together: R3↔R4 in Area 1 and R4↔R5 in Area 2; apply the Lab-00 key-chain HMAC-SHA-256 authentication on the new links. Area 2 is disconnected from the backbone — initially, R5's prefixes are unreachable from R1."
+      - "Configure an OSPF virtual link across Area 1 (R2 ↔ R4, transit-area 1) and verify Area 2 prefixes become reachable from the backbone; inspect show ip ospf virtual-links."
+      - "Configure Area 1 as a stub — verify Type-5 LSAs are blocked and a default route replaces them on R3; attempt totally stubby and observe Type-3 suppression too. Revert Area 1 to normal before proceeding."
+      - "On R5 redistribute Lo100 (172.16.100.0/24) into OSPF as an E2 external; observe the Type-5 LSA propagate to R1 while Area 2 is still normal."
+      - "Reconfigure Area 2 as NSSA: R5's redistribution now produces Type-7 LSAs inside Area 2. On R4 (N-bit ABR), show ip ospf database nssa-external shows the Type-7 entry; on R1/R2/R3, show ip ospf database external shows the translated Type-5 — confirming the translation happened at R4, not R5."
+      - "Switch Area 2 to totally stubby NSSA and document the LSA types now permitted (Type-1, Type-2, Type-7, and a default Type-3 from the ABR)."
+      - "Classify every router by role: R1 internal, R2 backbone + ABR, R3 internal, R4 ABR (non-ASBR), R5 internal + ASBR — cross-reference with show ip ospf."
+      - "Observe E1 vs E2 path preference in the backbone RIB: change the redistribution metric-type on R5 from 2 to 1 and re-verify the route's administrative type in show ip route."
+
+  - number: 4
+    folder: lab-04-ospfv3-dual-stack
+    title: "OSPFv3 and Dual-Stack Address Families"
+    difficulty: Advanced
+    type: progressive
+    time_minutes: 90
+    devices: [R1, R2, R3, R4, R5]
+    extends: lab-03-area-types-virtual-link
+    blueprint_refs: ["1.10", "1.10.a"]
+    objectives:
+      - "Enable router ospfv3 1 on all five routers with address-family ipv4 unicast and address-family ipv6 unicast under a single process."
+      - "Activate OSPFv3 on every interface with ospfv3 1 ipv4 area X and ospfv3 1 ipv6 area X — preserving the OSPFv2 area assignments (Area 0 on L1, Area 1 on L2/L3, Area 2 on L4)."
+      - "Add IPsec authentication on every OSPFv3 interface: ospfv3 authentication ipsec spi <N> sha1 <32-char-hex-key> — sequential SPI per interface starting at 500."
+      - "Configure the OSPFv3 virtual link between R2 and R4 (area 1 virtual-link <rid> under AF IPv4/IPv6) with matching IPsec auth — no hack required for R5's Area 2 unreachability."
+      - "Verify dual-stack independently: show ospfv3 ipv4 neighbor and show ospfv3 ipv6 neighbor — FULL state on every adjacency, including the virtual link."
+      - "Confirm that OSPFv2 (legacy) and OSPFv3 can coexist carrying the same IPv4 prefixes; contrast their LSA types, authentication methods, and RID derivations."
+
+  - number: 5
+    folder: lab-05-capstone-config
+    title: "OSPF Capstone I — Full Configuration"
+    type: capstone_i
+    clean_slate: true
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5]
+    blueprint_refs: all
+    objectives:
+      - "Starting from an IP-only baseline, build OSPFv2 process 1 spanning Area 0 (R1-R2), Area 1 (R2-R3-R4), and Area 2 (R4-R5) with correct router roles (R2 ABR, R4 ABR, R5 ASBR)."
+      - "Apply HMAC-SHA-256 key-chain authentication on every OSPFv2 interface (no MD5)."
+      - "Tune network types: point-to-point on R1-R2 and R2-R3, point-to-multipoint on R3-R4, default broadcast on R4-R5."
+      - "Configure a virtual link across Area 1 from R2 to R4 so Area 2 can reach the backbone."
+      - "Redistribute 172.16.100.0/24 from R5 as an E1 external; configure Area 2 as totally stubby NSSA and verify the Type-7 LSA originates on R5 but the Type-5 appears in the backbone originating from R4 (N-bit translation)."
+      - "Add OSPFv3 in parallel with AF ipv4 and AF ipv6, using IPsec SHA-1 authentication on every interface including the virtual link."
+      - "Pass all verification tasks in ≤ 120 minutes: dual-stack end-to-end reachability, correct intra > inter > E1 > E2 path-preference order in RIB, virtual link Up on both v2 and v3, NSSA translation visible in the right routers' LSDB."
+
+  - number: 6
+    folder: lab-06-capstone-troubleshooting
+    title: "OSPF Capstone II — Comprehensive Troubleshooting"
+    type: capstone_ii
+    clean_slate: true
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5]
+    blueprint_refs: all
+    objectives:
+      - "Diagnose and resolve at least five concurrent pre-injected faults spanning: (a) adjacency/auth failure (key-chain mis-bound, legacy MD5 surviving on one interface causing algorithm mismatch, MTU mismatch, area mismatch, or OSPFv3 SPI mismatch), (b) wrong network type preventing adjacency (nonbroadcast without neighbor statement, or p2p vs broadcast mismatch causing one-sided hellos), (c) broken virtual link (endpoint RID wrong, transit area stub-typed, or auth mismatch), (d) NSSA misconfiguration (N-bit cleared at ABR, stub on the ASBR-hosting area, or missing no-summary on totally stubby NSSA), (e) unexpected path preference (external type E1 vs E2, metric mismatch, or a leaked backdoor static), (f) OSPFv3 IPv4 AF down while IPv6 AF up (or vice versa) on the same interface."
+      - "Restore full dual-stack + external reachability from every router to every prefix, including the 172.16.100.0/24 NSSA external."
+      - "Justify each fix with show ip ospf, show ospfv3, show ip ospf database {router|network|summary|external|nssa-external}, show ip ospf virtual-links, and show ip ospf interface detail evidence — capturing before/after state."

@@ -1,0 +1,186 @@
+topic: eigrp
+topic_name: "EIGRP Routing"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-22"
+    agent: claude-opus-4-7
+    skill: spec-creator
+    skill_version: "2026-04-12"
+  updated: []
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "Central hub — full EIGRP neighbor of R2, R3, and (from Lab 02) R4"
+      loopback0: 10.1.1.1/32
+      loopback0_v6: 2001:db8:1::1/128
+      console_port: null   # Dynamic — assigned by EVE-NG at lab creation time
+
+    - name: R2
+      platform: iosv
+      role: "Branch router — full EIGRP neighbor of R1 and R3"
+      loopback0: 10.2.2.2/32
+      loopback0_v6: 2001:db8:2::2/128
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "Branch router — full EIGRP neighbor of R1 and R2"
+      loopback0: 10.3.3.3/32
+      loopback0_v6: 2001:db8:3::3/128
+      console_port: null
+
+  links:
+    - id: L1
+      source: R1:GigabitEthernet0/0
+      target: R2:GigabitEthernet0/0
+      subnet: 10.0.12.0/30
+      subnet_v6: 2001:db8:0:12::/64
+
+    - id: L2
+      source: R1:GigabitEthernet0/1
+      target: R3:GigabitEthernet0/0
+      subnet: 10.0.13.0/30
+      subnet_v6: 2001:db8:0:13::/64
+
+    - id: L3
+      source: R2:GigabitEthernet0/1
+      target: R3:GigabitEthernet0/1
+      subnet: 10.0.23.0/30
+      subnet_v6: 2001:db8:0:23::/64
+
+optional_devices:
+  - name: R4
+    platform: iosv
+    role: "Edge router — introduced Lab 02 as full neighbor of R1 for DUAL/SIA demo, then reconfigured as stub"
+    loopback0: 10.4.4.4/32
+    loopback0_v6: 2001:db8:4::4/128
+    console_port: null
+    available_from: lab-02-dual-and-stubs
+    purpose: "Drives SIA event (no alternative path to 10.4.4.4/32 via R2 or R3) and demonstrates the four EIGRP stub variants."
+
+optional_links:
+  - id: L4
+    source: R1:GigabitEthernet0/2
+    target: R4:GigabitEthernet0/0
+    subnet: 10.0.14.0/30
+    subnet_v6: 2001:db8:0:14::/64
+    available_from: lab-02-dual-and-stubs
+
+vrf_reservations:
+  # Reserved from Lab 03 onward. Per-VRF loopbacks on R1/R2/R3 act as CE prefixes.
+  - vrf: Customer-A
+    rd: "65100:1"
+    route_target_import: "65100:1"
+    route_target_export: "65100:1"
+    available_from: lab-03-load-balancing-vrf
+    per_device_loopback:
+      R1: 172.16.1.1/24
+      R2: 172.16.2.1/24
+      R3: 172.16.3.1/24
+  - vrf: Customer-B
+    rd: "65100:2"
+    route_target_import: "65100:2"
+    route_target_export: "65100:2"
+    available_from: lab-03-load-balancing-vrf
+    per_device_loopback:
+      R1: 172.16.101.1/24
+      R2: 172.16.102.1/24
+      R3: 172.16.103.1/24
+
+labs:
+  - number: 0
+    folder: lab-00-classic-adjacency
+    title: "EIGRP Fundamentals — Classic Mode"
+    difficulty: Foundation
+    type: progressive
+    time_minutes: 60
+    devices: [R1, R2, R3]
+    blueprint_refs: ["1.9", "1.9.b"]
+    objectives:
+      - "Bring up classic-mode EIGRP (AS 100) across the R1/R2/R3 triangle with correct network statements tied to real interface IPs."
+      - "Configure MD5 key-chain authentication on all three links and verify adjacencies reach the Up state."
+      - "Read neighbor state transitions from show ip eigrp neighbors detail (SRTT, Q Cnt, hold timers)."
+      - "Diagnose a deliberately-broken adjacency caused by mismatched AS number, mismatched K-values, or auth key mismatch."
+
+  - number: 1
+    folder: lab-01-named-mode-dual-stack
+    title: "Named Mode and Dual-Stack Address Families"
+    difficulty: Foundation
+    type: progressive
+    time_minutes: 75
+    devices: [R1, R2, R3]
+    extends: lab-00-classic-adjacency
+    blueprint_refs: ["1.9", "1.9.a", "1.9.b"]
+    objectives:
+      - "Migrate the classic EIGRP configuration to named mode via eigrp upgrade-cli without loss of adjacency."
+      - "Activate an IPv6 unicast address-family under the same named instance and bring up IPv6 neighbors across all three links."
+      - "Replace MD5 authentication with HMAC-SHA-256 (named-mode-only) under af-interface configuration."
+      - "Verify dual-stack operation independently: show eigrp address-family ipv4 neighbors and show eigrp address-family ipv6 neighbors."
+
+  - number: 2
+    folder: lab-02-dual-and-stubs
+    title: "DUAL and Stub Operation"
+    difficulty: Intermediate
+    type: progressive
+    time_minutes: 90
+    devices: [R1, R2, R3, R4]
+    extends: lab-01-named-mode-dual-stack
+    blueprint_refs: ["1.9.c", "1.9.d"]
+    objectives:
+      - "Activate R4 and bring it into the dual-stack named-mode topology as a full neighbor of R1 only."
+      - "Read RD, FD, and FC values in the topology table and identify the successor and feasible successor for each prefix from R2's perspective."
+      - "Trigger a Stuck-In-Active (SIA) event by breaking R1↔R4 — R1 queries R2 and R3, neither has a path, SIA timer fires — and explain the root cause from show ip eigrp events."
+      - "Configure R4 as a connected-only stub and re-observe the failure behavior; R4 no longer receives queries."
+      - "Compare the four stub variants (connected, summary, static, receive-only) and document which announcements are allowed in each."
+
+  - number: 3
+    folder: lab-03-load-balancing-vrf
+    title: "Load Balancing, Metrics, and VRF-Lite"
+    difficulty: Advanced
+    type: progressive
+    time_minutes: 120
+    devices: [R1, R2, R3, R4]
+    extends: lab-02-dual-and-stubs
+    blueprint_refs: ["1.9", "1.9.e", "1.9.f"]
+    objectives:
+      - "Configure equal-cost load balancing on R2 for R3's loopback (maximum-paths 4) and verify two ECMP next-hops in the RIB."
+      - "Enable unequal-cost load balancing by manipulating link delay on one path and applying variance to cover the ratio; confirm both routes install and observe show ip route per-destination traffic-share."
+      - "Switch the named instance from classic metrics to wide metrics (metric version 64bit) and rib-scale 128; verify EIGRP still converges and best-path selection is preserved."
+      - "Define Customer-A and Customer-B VRFs on R1/R2/R3 with the reserved RDs, attach per-VRF loopbacks, and activate per-VRF EIGRP AFs under the named instance."
+      - "Prove VRF isolation: Customer-A prefixes are absent from Customer-B's topology table on every router and vice versa."
+
+  - number: 4
+    folder: lab-04-capstone-config
+    title: "EIGRP Capstone I — Full Configuration"
+    type: capstone_i
+    clean_slate: true
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4]
+    blueprint_refs: all
+    objectives:
+      - "Starting from an IP-only baseline (interfaces addressed, no EIGRP), build named-mode EIGRP under AS 100 covering IPv4 and IPv6 AFs across all four routers."
+      - "Enforce HMAC-SHA-256 authentication on every adjacency and verify with show eigrp address-family ipv4 interfaces detail."
+      - "Configure R4 as a connected-and-summary stub."
+      - "Deploy unequal-cost load balancing (variance ≥ 2) on a designated R2-sourced path to R3."
+      - "Activate Customer-A VRF-Lite with per-VRF EIGRP reaching each router's Customer-A loopback."
+      - "Switch both IPv4 AFs to wide metrics (64-bit) with rib-scale 128 and confirm end-to-end dual-stack + per-VRF reachability within 120 minutes."
+
+  - number: 5
+    folder: lab-05-capstone-troubleshooting
+    title: "EIGRP Capstone II — Comprehensive Troubleshooting"
+    type: capstone_ii
+    clean_slate: true
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4]
+    blueprint_refs: all
+    objectives:
+      - "Diagnose and resolve at least five concurrent pre-injected faults spanning: (a) neighbor adjacency or authentication (K-value/AS/key-id/algorithm mismatch), (b) DUAL/SIA (missing FS or broken query path), (c) IPv6 AF neighbor down while IPv4 stays up, (d) misconfigured stub suppressing required prefixes, (e) wrong variance / traffic-share keyword preventing unequal-cost install, (f) VRF leak or missing per-VRF AF."
+      - "Restore full dual-stack + per-VRF end-to-end reachability (R1/R2/R3/R4 loopbacks and Customer-A VRF loopbacks) from every router."
+      - "Justify each fix with CLI evidence: show runs before/after, relevant show eigrp address-family … counters, and show ip eigrp events entries pinpointing the fault."

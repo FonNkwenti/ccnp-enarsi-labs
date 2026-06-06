@@ -1,0 +1,224 @@
+topic: bgp
+topic_name: "BGP Routing (iBGP and eBGP)"
+exam: "300-410"
+version: 1.0
+
+meta:
+  created:
+    date: "2026-04-24"
+    agent: claude-sonnet-4-6
+    skill: spec-creator
+    skill_version: "2026-04-24"
+  updated: []
+
+bgp_as_assignments:
+  as_65001:
+    members: [R1, R2, R3]
+    role: "iBGP domain — core AS"
+  as_65002:
+    members: [R4]
+    role: "External public AS — eBGP peer to R1"
+  as_64512:
+    members: [R5]
+    role: "External private AS — eBGP peer to R3 (available from Lab 02)"
+
+core_topology:
+  devices:
+    - name: R1
+      platform: iosv
+      role: "AS 65001 iBGP speaker; eBGP peer to R4 (AS 65002)"
+      loopback0: 10.1.1.1/32
+      loopback0_v6: 2001:db8:1::1/128
+      console_port: null   # Dynamic — assigned by EVE-NG at lab creation time
+
+    - name: R2
+      platform: iosv
+      role: "AS 65001 iBGP speaker; route reflector from Lab 03"
+      loopback0: 10.2.2.2/32
+      loopback0_v6: 2001:db8:2::2/128
+      console_port: null
+
+    - name: R3
+      platform: iosv
+      role: "AS 65001 iBGP speaker; eBGP peer to R5 (AS 64512) from Lab 02"
+      loopback0: 10.3.3.3/32
+      loopback0_v6: 2001:db8:3::3/128
+      console_port: null
+
+    - name: R4
+      platform: iosv
+      role: "AS 65002 eBGP peer to R1; used for path-preference, 4-byte AS, and VRF-Lite demos"
+      loopback0: 10.4.4.4/32
+      loopback0_v6: 2001:db8:4::4/128
+      console_port: null
+
+  links:
+    - id: L1
+      source: R1:GigabitEthernet0/0
+      target: R2:GigabitEthernet0/0
+      subnet: 10.0.12.0/30
+      subnet_v6: 2001:db8:0:12::/64
+      # R1: .1  R2: .2
+
+    - id: L2
+      source: R2:GigabitEthernet0/1
+      target: R3:GigabitEthernet0/0
+      subnet: 10.0.23.0/30
+      subnet_v6: 2001:db8:0:23::/64
+      # R2: .1  R3: .2
+
+    - id: L3
+      source: R1:GigabitEthernet0/1
+      target: R4:GigabitEthernet0/0
+      subnet: 10.0.14.0/30
+      subnet_v6: 2001:db8:0:14::/64
+      # R1: .1  R4: .2
+
+optional_devices:
+  - name: R5
+    platform: iosv
+    role: "AS 64512 (private) eBGP peer to R3; used for path-preference and remove-private-as demos"
+    loopback0: 10.5.5.5/32
+    loopback0_v6: 2001:db8:5::5/128
+    console_port: null
+    available_from: lab-02-path-preference
+    purpose: "Provides a second eBGP entry point (R3↔R5) alongside R1↔R4, enabling MED, local-pref, and AS-path prepend demonstrations. Private AS 64512 enables remove-private-as policy demo in Lab 03."
+
+optional_links:
+  - id: L4
+    source: R3:GigabitEthernet0/1
+    target: R5:GigabitEthernet0/0
+    subnet: 10.0.35.0/30
+    subnet_v6: 2001:db8:0:35::/64
+    available_from: lab-02-path-preference
+    # R3: .1  R5: .2
+
+underlying_igp:
+  protocol: ospf
+  process_id: 1
+  area: 0
+  purpose: "Loopback and next-hop reachability for loopback-based iBGP sessions. Pre-configured in initial-configs from Lab 01 onward. Not a teaching objective of this topic."
+  available_from: lab-01-neighbor-features-dual-stack
+
+authentication:
+  bgp:
+    mode: "MD5 password"
+    password: "ENARSI-BGP"
+    note: "IOSv 15.9 supports only MD5 via 'neighbor X password Y' for BGP authentication. TCP-AO (SHA-256) requires IOS-XE 17.x. MD5 mismatch is a Capstone II fault class."
+
+vrf_reservations:
+  - vrf: Customer-A
+    rd: "65001:1"
+    route_target_import: "65001:1"
+    route_target_export: "65001:1"
+    available_from: lab-03-rr-policies-vrf
+    per_device_loopback:
+      R1: 172.16.1.0/24
+      R3: 172.16.3.0/24
+    purpose: "Per-VRF BGP address-family demo (address-family ipv4 vrf Customer-A). R1 and R3 act as PE routers; loopbacks simulate CE prefixes."
+
+labs:
+  - number: 0
+    folder: lab-00-ebgp-ibgp-foundation
+    title: "eBGP and iBGP Fundamentals"
+    difficulty: Foundation
+    type: progressive
+    time_minutes: 60
+    devices: [R1, R2, R3, R4]
+    blueprint_refs: ["1.11", "1.11.b"]
+    objectives:
+      - "Bring up iBGP sessions in AS 65001 using directly-connected interface IPs: R1↔R2 (via L1) and R2↔R3 (via L2). Note that R1↔R3 cannot peer without an IGP — document the limitation."
+      - "Bring up eBGP session R1↔R4 (AS 65001 ↔ AS 65002) using interface IPs on L3."
+      - "Configure MD5 authentication (password ENARSI-BGP) on all BGP sessions and verify adjacencies reach Established."
+      - "Read BGP FSM state transitions from 'show bgp neighbors' (Idle → Active → OpenSent → OpenConfirm → Established) and explain what triggers each transition."
+      - "Inject a deliberate fault (auth mismatch, wrong remote-AS, wrong neighbor IP) and diagnose using 'show bgp summary', 'show bgp neighbors', and 'debug ip bgp'."
+
+  - number: 1
+    folder: lab-01-neighbor-features-dual-stack
+    title: "BGP Neighbor Features and Dual-Stack"
+    difficulty: Foundation
+    type: progressive
+    time_minutes: 75
+    devices: [R1, R2, R3, R4]
+    extends: lab-00-ebgp-ibgp-foundation
+    blueprint_refs: ["1.11", "1.11.a", "1.11.b"]
+    objectives:
+      - "Add OSPF Area 0 on all L1/L2/L3 links and loopbacks to establish IGP reachability across AS 65001 (pre-requisite for loopback-based iBGP)."
+      - "Migrate all iBGP sessions to loopback-based: add 'update-source Loopback0' and 'next-hop-self' to R1↔R2, R2↔R3. Add the missing R1↔R3 iBGP session to complete the full-mesh."
+      - "Configure peer-groups on each AS 65001 router: group all iBGP neighbors under 'iBGP-PEERS' with shared update-source, next-hop-self, and MD5 password."
+      - "Add eBGP multihop (ttl-security or ebgp-multihop 2) on R1↔R4 using loopback addresses; verify session re-forms sourced from Lo0."
+      - "Activate 'address-family ipv4 unicast' and 'address-family ipv6 unicast' on all sessions; verify dual-stack with 'show bgp ipv6 unicast summary'."
+      - "Demonstrate 4-byte AS support: reconfigure R4 as AS 65537, verify adjacency re-forms and 'show bgp neighbors' shows '4 Octet AS Capability: advertised and received', then restore R4 to AS 65002."
+      - "Demonstrate route-refresh: apply an inbound prefix-list, then use 'clear ip bgp X soft in' to re-read the adj-RIB-in without tearing the session."
+      - "Explain BGP synchronization: confirm it is disabled by default on IOSv 15.9 and describe when it was relevant (pre-MPLS, full-mesh iBGP in transit AS)."
+
+  - number: 2
+    folder: lab-02-path-preference
+    title: "BGP Path Preference and Best-Path"
+    difficulty: Intermediate
+    type: progressive
+    time_minutes: 90
+    devices: [R1, R2, R3, R4, R5]
+    extends: lab-01-neighbor-features-dual-stack
+    blueprint_refs: ["1.11.c"]
+    objectives:
+      - "Activate R5 (AS 64512) and bring up the eBGP session R3↔R5 on L4; add R5's loopback (10.5.5.5/32) to BGP and verify it propagates across AS 65001 to R1."
+      - "Have both R4 and R5 originate the same test prefix (e.g. 192.0.2.0/24) so AS 65001 receives it via two eBGP paths."
+      - "Walk the BGP best-path decision process step by step: Weight → Local-Pref → Locally-Originated → AS-Path length → Origin → MED → eBGP over iBGP → IGP metric → Router-ID."
+      - "Demonstrate Weight: set 'neighbor R4 weight 200' on R1; verify R1 prefers R4 path regardless of other attributes."
+      - "Demonstrate Local-Pref: set local-pref 200 on R1's inbound route-map from R4; verify all AS 65001 routers prefer the R1→R4 exit."
+      - "Demonstrate AS-path prepend: configure R5 to prepend its AS twice outbound toward R3; verify AS 65001 now prefers R4 path based on shorter AS-path."
+      - "Demonstrate MED: set MED 100 on R4's advertisement to R1 and MED 50 on R5's advertisement to R3 (from the same upstream AS); verify AS 65001 prefers R3→R5 exit based on lower MED."
+      - "Verify best-path selection at each step using 'show bgp X.X.X.X' and identify the '>' indicator, tiebreaker in use, and why the non-best path is not installed."
+
+  - number: 3
+    folder: lab-03-rr-policies-vrf
+    title: "Route Reflectors, Policies, and VRF-Lite"
+    difficulty: Advanced
+    type: progressive
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5]
+    extends: lab-02-path-preference
+    blueprint_refs: ["1.11.d", "1.11.e", "1.11"]
+    objectives:
+      - "Configure R2 as the single route reflector for AS 65001: add 'neighbor R1 route-reflector-client' and 'neighbor R3 route-reflector-client' to R2. Verify R1 receives routes learned from R3 via R2's RR reflection (cluster-id set to R2's RID)."
+      - "Verify that the direct R1↔R3 iBGP session (retained from Lab 01) now shows two paths to R3-sourced prefixes — one via RR, one direct — and that 'show bgp' marks the RR-reflected route with 'i' (internal) correctly."
+      - "Apply outbound prefix-list filtering on R1: deny 10.5.5.5/32 outbound toward R4; verify R4's RIB no longer contains R5's loopback."
+      - "Apply an AS-path access-list on R3: deny prefixes with AS-path matching ^64512$; verify R3 does not install R5's own AS in its BGP table."
+      - "Configure 'remove-private-as' on R3's neighbor R4 outbound (if R4 were in the path) and on R1's neighbor R4 outbound — verify the AS 64512 is stripped from AS-path in advertisements leaving AS 65001 toward R4."
+      - "Build a route-map on R1 (inbound from R4) that sets community 65001:100 on accepted prefixes; verify with 'show bgp X community'."
+      - "Deploy VRF-Lite: create VRF Customer-A on R1 and R3 with RD 65001:1; add Lo100 (172.16.1.0/24 on R1, 172.16.3.0/24 on R3); activate 'address-family ipv4 vrf Customer-A' under BGP and redistribute connected. Verify R1 and R3 exchange Customer-A prefixes in the VRF BGP table and the VRF is isolated from the global table."
+
+  - number: 4
+    folder: lab-04-capstone-config
+    title: "BGP Capstone I — Full Configuration"
+    type: capstone_i
+    clean_slate: true
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5]
+    blueprint_refs: all
+    objectives:
+      - "Starting from an IP-only baseline (interfaces addressed and OSPF Area 0 pre-running), build AS 65001 iBGP with peer-groups, loopback-based sessions (update-source Lo0, next-hop-self), and full-mesh across R1/R2/R3."
+      - "Bring up eBGP sessions: R1↔R4 (AS 65002, multihop via loopbacks) and R3↔R5 (AS 64512, interface IPs)."
+      - "Configure MD5 authentication (ENARSI-BGP) on all BGP sessions."
+      - "Activate IPv4 and IPv6 unicast address families on all sessions; verify dual-stack reachability for all loopbacks."
+      - "Promote R2 as route reflector for AS 65001 with R1 and R3 as RR clients."
+      - "Apply policies: prefix-list filtering (suppress R5's AS-path from leaking to R4), local-pref 200 via route-map inbound on R1 from R4, AS-path prepend outbound from R3 to R5."
+      - "Configure remove-private-as on R1 outbound toward R4."
+      - "Deploy VRF Customer-A on R1 and R3 with per-VRF BGP AF and verify isolated reachability of 172.16.x.0/24 loopbacks within the VRF."
+      - "Verify end-to-end: all AS 65001 routers reach all loopbacks, dual-stack, and Customer-A VRF — within 120 minutes."
+
+  - number: 5
+    folder: lab-05-capstone-troubleshooting
+    title: "BGP Capstone II — Comprehensive Troubleshooting"
+    type: capstone_ii
+    clean_slate: true
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5]
+    blueprint_refs: all
+    objectives:
+      - "Diagnose and resolve at least five concurrent pre-injected faults spanning: (a) iBGP session down — wrong update-source or next-hop unreachable (IGP missing a loopback), (b) eBGP auth mismatch — MD5 password typo on one side, (c) IPv6 AF neighbor down while IPv4 stays up — AF not activated or wrong 'activate' under address-family, (d) route reflector misconfiguration — missing route-reflector-client or cluster-id collision causing loop, (e) policy blocking all prefixes — prefix-list too broad or applied in wrong direction, (f) path preference broken — local-pref or weight set on wrong router so wrong exit is selected, (g) remove-private-as not applied — AS 64512 leaking into eBGP advertisements to R4."
+      - "Restore full dual-stack + VRF-Lite end-to-end reachability (all AS 65001 loopbacks, R4/R5 loopbacks, Customer-A VRF prefixes) from every router."
+      - "Justify each fix with CLI evidence: show bgp summary before/after, show bgp neighbors detail pinpointing the fault, show bgp X.X.X.X showing corrected best-path selection."
