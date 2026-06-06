@@ -1,0 +1,57 @@
+lab: lab-03-capstone-troubleshooting
+topic: dmvpn
+title: "DMVPN Comprehensive Troubleshooting — Capstone II"
+type: capstone_ii
+difficulty: Advanced
+time_minutes: 120
+clean_slate: true
+blueprint_refs:
+  - "2.3"
+  - "2.3.a"
+  - "2.3.b"
+  - "2.3.c"
+  - "2.3.d"
+  - "2.3.e"
+devices: [R1, R2, R3, R4]
+
+fault_map:
+  - fault: 1
+    device: R2
+    layer: underlay
+    description: "Default route missing — R2 cannot reach hub NBMA"
+  - fault: 2
+    device: R1
+    layer: ipsec
+    description: "Pre-shared key is badkey123 instead of cisco123 — all IKE fails"
+  - fault: 3
+    device: R3
+    layer: nhrp
+    description: "NHRP network-id 200 instead of 100 — R3 registration silently fails"
+  - fault: 4
+    device: R1
+    layer: phase3
+    description: "ip nhrp redirect missing from Tunnel0 — Phase 3 shortcuts never form"
+
+files:
+  - workbook.md
+  - setup_lab.py
+  - README.md
+  - initial-configs/R1.cfg
+  - initial-configs/R2.cfg
+  - initial-configs/R3.cfg
+  - initial-configs/R4.cfg
+  - solutions/R1.cfg
+  - solutions/R2.cfg
+  - solutions/R3.cfg
+  - solutions/R4.cfg
+  - topology/topology.drawio
+  - topology/README.md
+  - scripts/apply_solution.py
+  - meta.yaml
+
+created:
+  date: "2026-04-25"
+  agent: claude-haiku-4-5-20251001
+  skill: lab-assembler
+  skill_version: "2026-04-25"
+updated: []
