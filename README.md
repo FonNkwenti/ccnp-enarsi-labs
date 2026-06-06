@@ -35,6 +35,22 @@ python setup_lab.py --host <eve-ng-ip>
 
 > First time? Read [`labs/eigrp/lab-00-classic-adjacency/README.md`](labs/eigrp/lab-00-classic-adjacency/) for a full walkthrough.
 
+## Recommended Technology Order
+
+While each lab is self-contained, this topic progression aligns with exam objectives and builds conceptual depth:
+
+1. **EIGRP** — Start here. Distance-vector fundamentals, metrics, and neighbor relationships.
+2. **OSPF** — Link-state protocol. Reinforces routing concepts and area design.
+3. **BGP** — Exterior gateway protocol. Path selection, policies, and route reflection.
+4. **Route Control** — Filtering, tagging, and route maps across all protocols.
+5. **PBR / VRF / BFD** — Policy-based routing, virtual routing instances, bidirectional forwarding detection.
+6. **MPLS L3VPN** — Carrier-grade VPN. Builds on BGP and MPLS concepts.
+7. **DMVPN** — Dynamic VPN using GRE, NHRP, and IPsec.
+8. **Infrastructure Security** — ACLs, CoPP, uRPF, IPv6 security.
+9. **Infrastructure Services** — Device management, SNMP, logging, DHCP, IP SLA, NetFlow.
+
+> **Note:** Lab numbering within each topic (`lab-00`, `lab-01`, etc.) already indicates the recommended progression. Skip topics based on your weak areas, but follow the within-topic progression.
+
 ## Repository Layout
 
 ```

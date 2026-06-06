@@ -16,7 +16,7 @@
 |-------|-------|----------|
 | 1. Plan | ✓ complete | `specs/topic-plan.yaml` |
 | 2. Spec | ⧗ in progress | `labs/<topic>/spec.md` + `baseline.yaml` |
-| 3. Build | — not started | `labs/<topic>/lab-NN-<slug>/workbook.md` |
+| 3. Build | ⧗ in progress | `labs/<topic>/lab-NN-<slug>/workbook.md` |
 <!-- phase-summary-end -->
 
 ## Topic Build Matrix
@@ -30,7 +30,7 @@
 | route-control | ✓ | 0/6 | Admin distance, route maps, loop prevention, redistribution, summarization |
 | pbr-vrf-bfd | ✓ | 0/4 | PBR + BFD pair, VRF-Lite with inter-VRF leaking |
 | mpls-l3vpn | ✓ | 0/3 | MPLS forwarding + MP-BGP L3VPN (describe-only domain) |
-| dmvpn | ✓ | 0/4 | Phase 1 hub-spoke, Phase 3 shortcuts + IPsec |
+| dmvpn | ✓ | 4/4 | Phase 1, Phase 3 + IPsec, Capstone I & II |
 | infrastructure-security | ✓ | 0/5 | AAA, ACLs + uRPF, CoPP, IPv6 First Hop Security |
 | infrastructure-services | — | 0/6 | Mgmt planes, SNMP + Syslog, DHCP, IP SLA + NetFlow |
 <!-- topic-matrix-end -->
@@ -40,14 +40,17 @@ State legend: `—` not started · `⧗` in progress · `✓` complete · `⚠` 
 ## Recent Activity
 
 <!-- recent-activity-start -->
+- **2026-04-25** — `dmvpn/lab-03-capstone-troubleshooting` built (Capstone II — 4-layer fault stack: underlay/IPsec/NHRP/Phase3)
+- **2026-04-25** — `dmvpn/lab-02-capstone-config` built and approved (Capstone I — full-stack build from clean slate, 3 fault scenarios)
+- **2026-04-26** — `dmvpn/lab-01-phase3-shortcuts` built and approved (Phase 3 NHRP, IKEv1/IPsec, spoke-to-spoke, 3 fault scenarios)
+- **2026-04-26** — `dmvpn/lab-00-phase1-hub-spoke` built and approved (mGRE, NHRP, OSPF p2mp, 3 fault scenarios)
 - **2026-04-25** — Skills submodule synced to `529d3b3` (centralized README/STATUS templates)
-- _No build activity yet; `memory/progress.md` will populate this section once labs start landing._
 <!-- recent-activity-end -->
 
 ## Next Step
 
 <!-- next-step-start -->
-Run `/create-spec infrastructure-services` to finish Phase 2, then start Phase 3 with `/build-lab eigrp/lab-00-classic-adjacency` (first topic in build order).
+Run `/create-spec infrastructure-services` to finish Phase 2. Then start Phase 3 with `/build-lab eigrp/lab-00-classic-adjacency` or continue with `/build-topic eigrp`.
 <!-- next-step-end -->
 
 ---
