@@ -94,7 +94,7 @@ topics:
     build_order: 6
 
   - topic_id: dmvpn
-    topic_name: "DMVPN (single hub)"
+    topic_name: "DMVPN"
     blueprint_refs:
       - "2.3"
       - "2.3.a"
@@ -103,7 +103,7 @@ topics:
       - "2.3.d"
       - "2.3.e"
     estimated_labs: 4
-    scope_notes: "Single-hub DMVPN. Lab 1: Phase 1 (GRE/mGRE + NHRP hub-and-spoke). Lab 2: Phase 3 (spoke-to-spoke shortcut) + IPsec protection. OSPF used as overlay IGP in labs."
+    scope_notes: "TODO: Define scope during /create-spec."
     dependencies:
       - ospf
     build_order: 7
